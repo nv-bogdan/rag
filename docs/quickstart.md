@@ -266,16 +266,9 @@ Use the following procedure to start all containers needed for this blueprint. T
 3. Due to react limitations, any changes made to below environment variables will require developers to rebuilt the rag containers. This will be fixed in a future release.
 
    ```output
-   # Model name for LLM
-   NEXT_PUBLIC_MODEL_NAME: ${APP_LLM_MODELNAME:-meta/llama-3.1-70b-instruct}
-   # Model name for embeddings
-   VITE_EMBEDDING_MODEL: ${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-3.2-nv-embedqa-1b-v2}
-   # Model name for reranking
-   VITE_RERANKER_MODEL: ${APP_RANKING_MODELNAME:-nvidia/llama-3.2-nv-rerankqa-1b-v2}
-   # URL for rag server container
-   VITE_API_CHAT_URL: "http://rag-server:8081/v1"
-   # URL for ingestor container
-   VITE_MODEL_NAME: "http://ingestor-server:8082/v1"
+        VITE_API_CHAT_URL: ${VITE_API_CHAT_URL:-http://rag-server:8081/v1}
+        VITE_API_VDB_URL: ${VITE_API_VDB_URL:-http://ingestor-server:8082/v1}
+        VITE_MILVUS_URL: http://milvus:19530
    ```
 
 
@@ -457,7 +450,7 @@ kubectl create namespace rag
 Run the following command to install the RAG server with the Ingestor Server and Frontend enabled:
 
 ```sh
-helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
+helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
 --username '$oauthtoken' \
 --password "${NGC_API_KEY}" \
 --set imagePullSecret.password=$NGC_API_KEY \
@@ -503,7 +496,7 @@ For B200 and A100 GPUs, it is recommended to use CPU indexing and search for bet
 
 1. Using helm set command:
 ```sh
-helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
+helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
 --username '$oauthtoken' \
 --password "${NGC_API_KEY}" \
 --set imagePullSecret.password=$NGC_API_KEY \
@@ -520,7 +513,7 @@ ingestor-server:
     APP_VECTORSTORE_ENABLEGPUSEARCH: "False"
 ```
 
-> **Note:** If you're using the source Helm chart, make these changes in `deploy/helm/rag-server/values.yaml`.
+> **Note:** If you're using the source Helm chart, make these changes in `deploy/helm/nvidia-blueprint-rag/values.yaml`.
 
 > [!NOTE]
 > To deploy the Helm chart within 4xH100 using MIG slicing, see [RAG Deployment with MIG Support](./mig-deployment.md).
@@ -530,6 +523,18 @@ ingestor-server:
 
 Follow this section only if you are working directly with the source Helm chart and want to customize components individually.
 
+**Change directory to deploy/helm/**
+   ```sh
+   cd deploy/helm/
+   ```
+
+
+**Create a namespace for the deployment:**
+
+```sh
+kubectl create namespace rag
+```
+
 ##### Helm Repo Additions
 
 ```sh
@@ -537,19 +542,24 @@ helm repo add nvidia-nim https://helm.ngc.nvidia.com/nim/nvidia/ --username='$oa
 helm repo add nim https://helm.ngc.nvidia.com/nim/ --username='$oauthtoken' --password=$NGC_API_KEY
 helm repo add nemo-microservices https://helm.ngc.nvidia.com/nvidia/nemo-microservices --username='$oauthtoken' --password=$NGC_API_KEY
 helm repo add baidu-nim https://helm.ngc.nvidia.com/nim/baidu --username='$oauthtoken' --password=$NGC_API_KEY
+# TODO: remove after moving to GA NV-ingest helm chart
+helm repo add nvstaging-nim  https://helm.ngc.nvidia.com/nvstaging/nim --username='$oauthtoken' --password=$NGC_API_KEY
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add otel https://open-telemetry.github.io/opentelemetry-helm-charts
+helm repo add zipkin https://zipkin.io/zipkin-helm
+helm repo add prometheus https://prometheus-community.github.io/helm-charts
 ```
 
 ##### Updating Helm Chart Dependencies
 
 ```sh
-helm dependency update rag-server/charts/ingestor-server
-helm dependency update rag-server
+helm dependency update nvidia-blueprint-rag
 ```
 
 ##### Install the chart
 
 ```sh
-helm upgrade --install rag -n rag rag-server/ \
+helm upgrade --install rag -n rag nvidia-blueprint-rag/ \
 --set imagePullSecret.password=$NGC_API_KEY \
 --set ngcApiSecret.password=$NGC_API_KEY
 ```
@@ -627,8 +637,8 @@ kubectl get svc -n rag
 NAME                                TYPE            EXTERNAL-IP   PORT(S)                                                   AGE
 ingestor-server                     ClusterIP      <none>        8082/TCP                                                  26m
 kubernetes                          ClusterIP      <none>        443/TCP                                                   4d20h
-nemo-embedding-ms                   ClusterIP      <none>        8000/TCP                                                  26m
-nemo-ranking-ms                     ClusterIP      <none>        8000/TCP                                                  26m
+nemoretriever-embedding-ms                   ClusterIP      <none>        8000/TCP                                                  26m
+nemoretriever-ranking-ms                     ClusterIP      <none>        8000/TCP                                                  26m
 nemoretriever-graphic-elements-v1   ClusterIP      <none>        8000/TCP,8001/TCP                                         26m
 nemoretriever-page-elements-v2      ClusterIP      <none>        8000/TCP,8001/TCP                                         26m
 nemoretriever-table-structure-v1    ClusterIP      <none>        8000/TCP,8001/TCP                                         26m
@@ -653,12 +663,12 @@ rag-zipkin                          ClusterIP      <none>        9411/TCP       
 #### Patching the deployment
 For patching an existing deployment, modify `values.yaml` with required changes and run
 ```sh
-helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
+helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
 --username '$oauthtoken' \
 --password "${NGC_API_KEY}" \
 --set imagePullSecret.password=$NGC_API_KEY \
 --set ngcApiSecret.password=$NGC_API_KEY \
--f rag-server/values.yaml
+-f nvidia-blueprint-rag/values.yaml
 ```
 
 #### Enable NIM Operator with the chart
@@ -679,90 +689,23 @@ helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprin
   kubectl apply -f deploy/helm/nim-operator/rag-nimservice.yaml -n rag
   ```
 
-3. Use the following values.yaml to deploy the RAG with NIM Operator NIM Services
-
-```yaml
-envVars:
-  APP_LLM_MODELNAME: "nvidia/llama-3.3-nemotron-super-49b-v1"
-  APP_LLM_SERVERURL: "nim-llm:8000"
-  APP_QUERYREWRITER_MODELNAME: "nvidia/llama-3.3-nemotron-super-49b-v1"
-  APP_QUERYREWRITER_SERVERURL: "nim-llm:8000"
-nim-llm:
-  enabled: false
-nvidia-nim-llama-32-nv-embedqa-1b-v2:
-  enabled: false
-text-reranking-nim:
-  enabled: false
-ingestor-server:
-  nv-ingest:
-    nemoretriever-graphic-elements-v1:
-      deployed: false
-    nemoretriever-page-elements-v2:
-      deployed: false
-    nemoretriever-table-structure-v1:
-      deployed: false
-```
-
 4. Delete the existing secret as it's conflict with RAG installation
 
   ```sh
   kubectl delete secret ngc-secret -n rag
   ```
 
-5. Run the following command to install the RAG server with NIM Operator:
+4. Use the following `values-nim-operator.yaml` to deploy the RAG with NIM Operator NIM Services
 
   ```sh
-  helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
+  helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
   --username '$oauthtoken' \
   --password "${NGC_API_KEY}" \
   --set imagePullSecret.password=$NGC_API_KEY \
   --set ngcApiSecret.password=$NGC_API_KEY \
-  -f values.yaml
+  -f deploy/helm/nim-operator/values-nim-operator.yaml
   ```
 
-#### Enabling Observability with the chart
-
-To enable tracing and view the Zipkin or Grafana UI, follow these steps:
-
-##### Enable OpenTelemetry Collector, Zipkin and Prometheus stack
-
-   1. Modify `values.yaml`:
-
-      Update the `values.yaml` file to enable the OpenTelemetry Collector and Zipkin:
-
-      ```yaml
-      env:
-      # ... existing code ...
-      APP_TRACING_ENABLED: "True"
-
-      # ... existing code ...
-      serviceMonitor:
-      enabled: true
-      opentelemetry-collector:
-      enabled: true
-      # ... existing code ...
-
-      zipkin:
-      enabled: true
-      kube-prometheus-stack:
-      enabled: true
-      ```
-
-   2. Deploy the Changes:
-
-      Redeploy the Helm chart to apply these changes:
-
-      ```sh
-      helm uninstall rag -n rag
-      helm install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
-      --username '$oauthtoken' \
-      --password "${NGC_API_KEY}" \
-      --set imagePullSecret.password=$NGC_API_KEY \
-      --set ngcApiSecret.password=$NGC_API_KEY \
-      -f rag-server/values.yaml
-      ```
-
-   For detailed information on tracing, refer to [observability](./observability.md#viewing-traces-in-zipkin).
 
 #### Port-Forwarding to Access UIs
 
@@ -825,7 +768,7 @@ helm uninstall rag -n rag
 Run the following command to install the RAG Server:
 
 ```sh
-helm upgrade --install rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz -n rag \
+helm upgrade --install rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz -n rag \
   --username '$oauthtoken' \
   --password "${NGC_API_KEY}" \
   --set imagePullSecret.password=$NGC_API_KEY \
@@ -835,30 +778,6 @@ helm upgrade --install rag https://helm.ngc.nvidia.com/nvstaging/blueprint/chart
   --set ingestor-server.enabled=false
 ```
 
-#### (Optional) Deploying Standalone Ingestor Server
-
-Before installing the standalone Ingestor Server, update `rag-server/charts/ingestor-server/values.yaml` to enable the required secrets and the embedding NIM:
-
-```yaml
-nv-ingest:
-  ngcApiSecret:
-    create: true
-  ngcImagePullSecret:
-    create: true
-  nvidia-nim-llama-32-nv-embedqa-1b-v2:
-    deployed: true
-  envVars:
-    EMBEDDING_NIM_ENDPOINT: "http://nv-ingest-embedqa:8000/v1"
-```
-
-Then run the following command to install (or upgrade) the Ingestor Server:
-
-```sh
-helm upgrade --install rag rag-server/charts/ingestor-server -n rag \
-  --set imagePullSecret.password="$NGC_API_KEY" \
-  --set nv-ingest.ngcImagePullSecret.password="$NGC_API_KEY" \
-  --set nv-ingest.ngcApiSecret.password="$NGC_API_KEY"
-```
 
 #### (Optional) Enabling persistence for NIMs
 
@@ -877,7 +796,7 @@ To use a custom Milvus endpoint, you need to update the `APP_VECTORSTORE_URL` en
 
 1. **Edit `values.yaml`:**
 
-   Open the `deploy/helm/rag-server/values.yaml` file and update the `APP_VECTORSTORE_URL` and `MINIO_ENDPOINT` for both the RAG server and the Ingestor server sections:
+   Open the `deploy/helm/nvidia-blueprint-rag/values.yaml` file and update the `APP_VECTORSTORE_URL` and `MINIO_ENDPOINT` for both the RAG server and the Ingestor server sections:
 
    ```yaml
    env:
@@ -917,7 +836,7 @@ To use a custom Milvus endpoint, you need to update the `APP_VECTORSTORE_URL` en
    Redeploy the Helm chart to apply these changes:
 
    ```sh
-   helm upgrade rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz -f rag-server/values.yaml -n rag
+   helm upgrade rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz -f nvidia-blueprint-rag/values.yaml -n rag
    ```
 
 #### (Optional) Customizing the RAG Server UI
@@ -926,16 +845,12 @@ Currently, Frontend doesn't support dynamic variables.
 The default variables and values are the following:
 
    ```
-      name: NEXT_PUBLIC_MODEL_NAME
-      value: "meta/llama-3.1-70b-instruct"
-    - name: VITE_EMBEDDING_MODEL
-      value: "nvidia/llama-3.2-nv-embedqa-1b-v2"
-    - name: VITE_RERANKER_MODEL
-      value: "nvidia/llama-3.2-nv-rerankqa-1b-v2"
     - name: VITE_API_CHAT_URL
       value: "http://rag-server:8081/v1"
-    - name: VITE_MODEL_NAME
+    - name: VITE_API_VDB_URL
       value: "http://ingestor-server:8082/v1"
+    - name: VITE_MILVUS_URL
+      value: "http://milvus:19530"
    ```
 
   If you have a plan to customize the RAG server deployment like LLM Model Change then please follow the steps to deploy the Frontend
@@ -960,16 +875,9 @@ The default variables and values are the following:
         context: ../../frontend
         dockerfile: ./Dockerfile
         args:
-          # Model name for LLM
-          NEXT_PUBLIC_MODEL_NAME: ${APP_LLM_MODELNAME:-meta/llama-3.1-8b-instruct}
-          # Model name for embeddings
-          VITE_EMBEDDING_MODEL: ${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-3.2-nv-embedqa-1b-v2}
-          # Model name for reranking
-          VITE_RERANKER_MODEL: ${APP_RANKING_MODELNAME:-nvidia/llama-3.2-nv-rerankqa-1b-v2}
-          # URL for rag server container
           VITE_API_CHAT_URL: "http://rag-server:8081/v1"
           # URL for ingestor container
-          VITE_MODEL_NAME: "http://ingestor-server:8082/v1"
+          VITE_API_VDB_URL: "http://ingestor-server:8082/v1"
       ports:
         - "8090:3000"
       expose:
@@ -989,7 +897,7 @@ The default variables and values are the following:
    - Run the following command to install the RAG server with the Ingestor Server and New Frontend with updated `<new-image-repository>` and `<new-image-tag>`:
 
       ```sh
-      helm install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
+      helm install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
       --username '$oauthtoken' \
       --password "${NGC_API_KEY}" \
       --set imagePullSecret.password=$NGC_API_KEY \
@@ -1060,10 +968,12 @@ Follow the cells in the notebook to ingest the PDF files from the data/dataset f
 - [Enable Self-Reflection to improve accuracy](self-reflection.md)
 - [Enable Query rewriting to Improve accuracy of Multi-Turn Conversations](query_rewriter.md)
 - [Enable Image captioning support for ingested documents](image_captioning.md)
+- [Enable VLM embedding model](vlm-embed.md)
 - [Enable hybrid search for milvus](hybrid_search.md)
 - [Add custom metadata while uploaded documents](custom-metadata.md)
 - [Enable low latency, low compute text only pipeline](text_only_ingest.md)
 - [Enable VLM based inferencing in RAG](vlm.md)
+- [Multimodal Input Guide RAG](multimodal_input_guide.md)
 - [Enable PDF extraction with Nemoretriever Parse](nemoretriever-parse-extraction.md)
 - [Enable NeMo Retriever OCR for enhanced text extraction](docs/nemoretriever-ocr.md)
 - [Enable standalone NV-Ingest for direct document ingestion without ingestor server](nv-ingest-standalone.md)

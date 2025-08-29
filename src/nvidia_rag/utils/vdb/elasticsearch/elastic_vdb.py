@@ -413,7 +413,7 @@ class ElasticVDB(VDBRag):
 
         end_time = time.time()
         latency = end_time - start_time
-        logger.info(f" Elasticsearch Retriever latency: {latency:.4f} seconds")
+        logger.info(f" Elasticsearch Retrieval latency: {latency:.4f} seconds")
 
         otel_context.detach(token)
         return self._add_collection_name_to_retreived_docs(docs, collection_name)

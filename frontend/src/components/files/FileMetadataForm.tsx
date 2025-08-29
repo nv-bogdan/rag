@@ -36,7 +36,9 @@ export const FileMetadataForm = ({ fileName }: FileMetadataFormProps) => {
   return (
     <div className="mt-4 pt-4 border-t border-neutral-700">
       <div className="space-y-4">
-        {metadataSchema.map((field: UIMetadataField) => (
+        {metadataSchema
+          .filter((field: UIMetadataField) => field.name !== 'filename') // Filter out filename field
+          .map((field: UIMetadataField) => (
           <MetadataField
             key={field.name}
             fileName={fileName}

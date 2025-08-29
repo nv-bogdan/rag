@@ -41,7 +41,7 @@ The NVIDIA RAG system now features **advanced metadata filtering with natural la
 config = {
     "filter_expression_generator": {
         "enable_filter_generator": True,
-        "model_name": "nvidia/llama-3.3-nemotron-super-49b-v1",
+        "model_name": "nvidia/llama-3_3-nemotron-super-49b-v1_5",
         "temperature": 0.1,
         "max_tokens": 500
     }
@@ -133,17 +133,20 @@ This notebook demonstrates:
 
 ## Vector Database Support
 
-### 🎯 **Milvus Support (Primary)**
-- ✅ **Natural Language Filter Generation**: Fully supported
-- ✅ **Complex Filter Expressions**: String-based syntax with full validation
-- ✅ **Schema Validation**: Comprehensive metadata schema validation
-- ✅ **Array Functions**: Full support for `array_contains`, `array_length`, etc.
+| Feature | Milvus | Elasticsearch |
+|---------|--------|---------------|
+| **Natural Language Filter Generation** | ✅ Fully automated with LLM integration | 🔧 Advanced users can leverage native Elasticsearch Query DSL for sophisticated queries |
+| **Filter Expression Complexity** | ✅ String-based syntax with validation | 🚀 Full Elasticsearch Query DSL support - Boolean, range, nested, geo, and aggregation queries |
+| **Schema Validation** | ✅ Comprehensive metadata schema validation | 🔧 Flexible schema-less design with dynamic mapping capabilities |
+| **Array Operations** | ✅ Built-in functions: `array_contains`, `array_length`, etc. | 🚀 Native nested object support with powerful array querying capabilities |
+| **Query Performance** | ⚡ Optimized for vector similarity with metadata filtering | ⚡ Industry-leading full-text search with advanced scoring algorithms |
+| **Advanced Features** | 🎯 Simple, intuitive filter syntax | 🚀 Multi-field search, fuzzy matching, proximity queries, aggregations, and analytics |
+| **UI Support** | ✅ **Primary support** - Full filtering interface in UI | ❌ **No UI support** - Requires direct API integration |
 
-### 🔍 **Elasticsearch Support (Limited)**
-- ❌ **Natural Language Filter Generation**: **NOT SUPPORTED**
-- ❌ **Complex Filter Expressions**: Limited to basic validation
-- ❌ **Schema Validation**: Basic type checking only
-- ❌ **Array Functions**: Not supported
+### Key Differences
+
+- **🎯 Milvus**: Designed for simplicity with automated natural language filter generation, perfect for users who want straightforward metadata filtering
+- **🚀 Elasticsearch**: Provides full access to enterprise-grade search capabilities, ideal for advanced users who need complex querying, analytics, and fine-grained control
 
 ## Natural Language Filter Generation
 
@@ -339,6 +342,12 @@ The system validates metadata during ingestion:
 
 Filter expressions use the format: `content_metadata["field_name"] operator value`
 
+**Milvus Filter Syntax Documentation:**  
+See the [Milvus Filtering Explained](https://milvus.io/docs/boolean.md#Filtering-Explained) guide for full details.
+
+**💡 Note:** This document contains extensive examples throughout - from quick start examples, natural language filter generation, to complex expressions and API usage examples.
+
+
 ### Supported Operators by Type
 
 #### String Operations
@@ -419,7 +428,7 @@ payload = {
 For Elasticsearch, filters must be provided as a list of dictionaries using Elasticsearch query syntax:
 
 ```python
-# Elasticsearch filter example (limited support)
+# Elasticsearch filter example
 filter_expr = [
     {"term": {"metadata.content_metadata.category": "AI"}},
     {"range": {"metadata.content_metadata.priority": {"gt": 5}}}
@@ -427,6 +436,8 @@ filter_expr = [
 ```
 
 **Note**: Elasticsearch filters use the `metadata.content_metadata.field_name` format and support standard Elasticsearch query types like `term`, `range`, `wildcard`, `terms`, etc.
+
+**Advanced Elasticsearch Support**: All ES queries are supported. Advanced developers who are familiar with Elasticsearch can refer to the [official Elasticsearch query and filter documentation](https://www.elastic.co/docs/explore-analyze/query-filter) and write any query or filter anything they need. This advanced functionality is intended for experienced Elasticsearch users.
 
 ## Advanced Filtering Features
 
@@ -447,7 +458,7 @@ filter_expr = [
 # Configuration file (config.yaml)
 filter_expression_generator:
   enable_filter_generator: true
-  model_name: "nvidia/llama-3.3-nemotron-super-49b-v1"
+  model_name: "nvidia/llama-3_3-nemotron-super-49b-v1_5"
   server_url: ""  # Leave empty for default endpoint
   temperature: 0.1  # Low temperature for consistent results
   top_p: 0.9
@@ -471,7 +482,7 @@ metadata:
 export ENABLE_FILTER_GENERATOR=true
 
 # LLM configuration
-export APP_FILTEREXPRESSIONGENERATOR_MODELNAME="nvidia/llama-3.3-nemotron-super-49b-v1"
+export APP_FILTEREXPRESSIONGENERATOR_MODELNAME="nvidia/llama-3_3-nemotron-super-49b-v1_5"
 export APP_FILTEREXPRESSIONGENERATOR_SERVERURL=""
 
 # Metadata configuration

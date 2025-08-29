@@ -137,6 +137,25 @@ class NvidiaRAGIngestor:
             health_results.update(dependencies_results)
         return health_results
 
+    async def validate_directory_traversal_attack(self, file):
+        try:
+            # Below code should return the relative file path starting from the
+            # current working directory, or raise a ValueError if a directory
+            # traversal attack is tried
+            if file:
+                if os.path.isabs(file):
+                    file = Path(file).relative_to(Path.cwd().resolve().anchor)
+                _ = (
+                    Path(Path.cwd().resolve())
+                    .joinpath(Path(file))
+                    .resolve()
+                    .relative_to(Path.cwd().resolve())
+                )
+        except Exception as e:
+            raise ValueError(
+                f"Directory traversal attack detected in filepath {file}"
+            ) from e
+
     def __prepare_vdb_op_and_collection_name(
         self,
         vdb_endpoint: str = None,
@@ -204,6 +223,11 @@ class NvidiaRAGIngestor:
             }
         if custom_metadata is None:
             custom_metadata = []
+
+        if not vdb_op.check_collection_exists(collection_name):
+            raise ValueError(
+                f"Collection {collection_name} does not exist. Ensure a collection is created using POST /collection endpoint first."
+            )
 
         try:
             if not blocking:
@@ -327,6 +351,7 @@ class NvidiaRAGIngestor:
                 }
 
             for file in filepaths:
+                await self.validate_directory_traversal_attack(file)
                 filename = os.path.basename(file)
                 # Check if the provided filepaths are valid
                 if not os.path.exists(file):
@@ -410,11 +435,6 @@ class NvidiaRAGIngestor:
             # Peform ingestion using nvingest for all files that have not failed
             # Check if the provided collection_name exists in vector-DB
 
-            if not vdb_op.check_collection_exists(collection_name):
-                raise ValueError(
-                    f"Collection {collection_name} does not exist in. Ensure a collection is created using POST /collections endpoint first."
-                )
-
             start_time = time.time()
             results, failures = await self.__nvingest_upload_doc(
                 filepaths=filepaths,
@@ -479,6 +499,7 @@ class NvidiaRAGIngestor:
             if self.mode == SERVER_MODE:
                 logger.info(f"Cleaning up files in {filepaths}")
                 for file in filepaths:
+                    await self.validate_directory_traversal_attack(file)
                     try:
                         os.remove(file)
                         logger.debug(f"Deleted temporary file: {file}")
@@ -542,6 +563,7 @@ class NvidiaRAGIngestor:
             custom_metadata = []
 
         for file in filepaths:
+            await self.validate_directory_traversal_attack(file)
             file_name = os.path.basename(file)
 
             # Delete the existing document
@@ -1220,8 +1242,10 @@ class NvidiaRAGIngestor:
             )
 
         if not results:
-            error_message = "NV-Ingest ingestion failed with no results. Please check the ingestor-server microservice logs for more details."
+            error_message = "NV-Ingest ingestion failed with no results."
             logger.error(error_message)
+            if len(failures) > 0:
+                return results, failures
             raise Exception(error_message)
 
         try:
@@ -1386,10 +1410,12 @@ class NvidiaRAGIngestor:
                 continue
 
             if validator and metadata_schema:
-                is_valid, field_errors, normalized_metadata = (
-                    validator.validate_and_normalize_metadata_values(
-                        metadata, metadata_schema
-                    )
+                (
+                    is_valid,
+                    field_errors,
+                    normalized_metadata,
+                ) = validator.validate_and_normalize_metadata_values(
+                    metadata, metadata_schema
                 )
                 logger.debug(
                     f"Metadata validation for '{filename}': {'PASSED' if is_valid else 'FAILED'}"
@@ -1606,9 +1632,8 @@ class NvidiaRAGIngestor:
         # TODO: Make these parameters configurable
         llm_params = {
             "model": summary_llm_name,
-            "temperature": 0.4,
-            "top_p": 0.9,
-            "max_tokens": 2048,
+            "temperature": 0,
+            "top_p": 1.0,
         }
 
         if summary_llm_endpoint:

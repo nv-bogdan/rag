@@ -51,9 +51,9 @@ Retrieval Operations:
 import logging
 import os
 import time
-from functools import wraps
 from typing import Any
 from urllib.parse import urlparse
+from uuid import uuid4
 
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnableAssign, RunnableLambda
@@ -85,34 +85,6 @@ except ImportError:
 CONFIG = get_config()
 
 
-def milvus_connection_manager(func):
-    """
-    Decorator to manage Milvus database connections.
-    Automatically connects to Milvus before function execution and disconnects after.
-    """
-
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        try:
-            connections.connect(
-                self.connection_alias, host=self.url.hostname, port=self.url.port
-            )
-            logger.debug(f"Connected to Milvus at {self.vdb_endpoint}")
-            result = func(self, *args, **kwargs)
-            return result
-        except Exception as e:
-            logger.error(f"Error during Milvus operation: {e}")
-            raise
-        finally:
-            try:
-                connections.disconnect(self.connection_alias)
-                logger.debug(f"Disconnected from Milvus at {self.vdb_endpoint}")
-            except Exception as e:
-                logger.warning(f"Error disconnecting from Milvus: {e}")
-
-    return wrapper
-
-
 class MilvusVDB(Milvus, VDBRag):
     def __init__(self, **kwargs):
         self.embedding_model = kwargs.pop(
@@ -124,8 +96,37 @@ class MilvusVDB(Milvus, VDBRag):
 
         # Get the connection alias from the url
         self.url = urlparse(self.vdb_endpoint)
-        self.connection_alias = f"milvus_{self.url.hostname}_{self.url.port}"
+        self.connection_alias = (
+            f"milvus_{self.url.hostname}_{self.url.port}_{str(uuid4())[:8]}"
+        )
         self.csv_file_path = kwargs.get("meta_dataframe")
+
+        # Establish a single persistent connection for the lifetime of this instance
+        try:
+            connections.connect(self.connection_alias, uri=self.vdb_endpoint)
+            self._connected = True
+            logger.debug(f"Connected to Milvus at {self.vdb_endpoint}")
+        except Exception as e:
+            logger.error(f"Failed to connect to Milvus at {self.vdb_endpoint}: {e}")
+            raise
+
+    def close(self):
+        """Close the Milvus connection."""
+        if self._connected:
+            try:
+                connections.disconnect(self.connection_alias)
+                logger.debug(f"Disconnected from Milvus at {self.vdb_endpoint}")
+                self._connected = False
+            except Exception as e:
+                logger.warning(f"Error disconnecting from Milvus: {e}")
+
+    def __enter__(self):
+        """Enter the runtime context (for use as context manager)."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit the runtime context."""
+        self.close()
 
     @property
     def collection_name(self) -> str:
@@ -139,7 +140,6 @@ class MilvusVDB(Milvus, VDBRag):
 
     # ----------------------------------------------------------------------------------------------
     # Implementations of the abstract methods specific to VDBRag class for ingestion
-    @milvus_connection_manager
     def create_collection(
         self,
         collection_name: str,
@@ -159,19 +159,14 @@ class MilvusVDB(Milvus, VDBRag):
             dense_dim=dimension,
         )
 
-    @milvus_connection_manager
     def check_collection_exists(self, collection_name: str) -> bool:
         """
         Check if a collection exists in the Milvus index.
         """
-        try:
-            if not utility.has_collection(collection_name, using=self.connection_alias):
-                return False
-            return True
-        finally:
-            connections.disconnect(self.connection_alias)
+        if not utility.has_collection(collection_name, using=self.connection_alias):
+            return False
+        return True
 
-    @milvus_connection_manager
     def _get_milvus_entities(self, collection_name: str, filter: str = ""):
         """
         Get the metadata schema for a collection in the Milvus index.
@@ -186,7 +181,6 @@ class MilvusVDB(Milvus, VDBRag):
 
         return entities
 
-    @milvus_connection_manager
     def _get_collection_info(self):
         """
         Get the list of collections in the Milvus index without metadata schema.
@@ -233,7 +227,6 @@ class MilvusVDB(Milvus, VDBRag):
 
         return collection_info
 
-    @milvus_connection_manager
     def _delete_collections(self, collection_names: list[str]):
         """
         Delete a collection from the Milvus index.
@@ -264,7 +257,6 @@ class MilvusVDB(Milvus, VDBRag):
         logger.info(f"Collections deleted: {deleted_collections}")
         return deleted_collections, failed_collections
 
-    @milvus_connection_manager
     def _delete_entities(self, collection_name: str, filter: str = ""):
         """
         Delete the metadata schema from the collection.
@@ -316,7 +308,6 @@ class MilvusVDB(Milvus, VDBRag):
             return os.path.basename(metadata["source"]["source_name"])
         return None
 
-    @milvus_connection_manager
     def _get_documents_list(
         self, collection_name: str, metadata_schema: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
@@ -383,7 +374,6 @@ class MilvusVDB(Milvus, VDBRag):
         )
         return documents_list
 
-    @milvus_connection_manager
     def delete_documents(
         self,
         collection_name: str,
@@ -419,7 +409,6 @@ class MilvusVDB(Milvus, VDBRag):
             collection.flush()
         return True
 
-    @milvus_connection_manager
     def create_metadata_schema_collection(
         self,
     ) -> None:
@@ -456,7 +445,6 @@ class MilvusVDB(Milvus, VDBRag):
             )
             logger.info(f"Metadata schema collection created at {self.vdb_endpoint}")
 
-    @milvus_connection_manager
     def add_metadata_schema(
         self,
         collection_name: str,
@@ -520,11 +508,12 @@ class MilvusVDB(Milvus, VDBRag):
         if vectorstore is None:
             vectorstore = self.get_langchain_vectorstore(collection_name)
 
+        start_time = time.time()
+
         token = otel_context.attach(otel_ctx)
 
         retriever = vectorstore.as_retriever(search_kwargs={"k": top_k})
 
-        start_time = time.time()
         retriever_lambda = RunnableLambda(
             lambda x: retriever.invoke(
                 x,
@@ -540,7 +529,7 @@ class MilvusVDB(Milvus, VDBRag):
 
         end_time = time.time()
         latency = end_time - start_time
-        logger.info(f" Milvus Retriever latency: {latency:.4f} seconds")
+        logger.info(f" Milvus Retrieval latency: {latency:.4f} seconds")
 
         otel_context.detach(token)
         return self._add_collection_name_to_retreived_docs(docs, collection_name)

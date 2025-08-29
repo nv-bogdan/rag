@@ -1,7 +1,7 @@
 services:
   nim-llm:
     container_name: nim-llm-ms
-    image: nvcr.io/nim/nvidia/llama-3.3-nemotron-super-49b-v1:1.8.5
+    image: nvcr.io/nim/nvidia/llama-3_3-nemotron-super-49b-v1_5:1.12.0
     volumes:
     - ${MODEL_DIRECTORY:-./}:/opt/nim/.cache
     user: "${USERID}"
@@ -55,7 +55,7 @@ services:
       timeout: 20s
       retries: 3
       start_period: 10m
-    profiles: ["", "rag", "ingest"]
+    profiles: ["", "rag", "ingest", "text-embed"]
 
   nemoretriever-vlm-embedding-ms:
     container_name: nemoretriever-vlm-embedding-ms
@@ -85,7 +85,7 @@ services:
       timeout: 20s
       retries: 3
       start_period: 10m
-    profiles: ["", "rag", "ingest"]
+    profiles: ["vlm-embed"]
 
   nemoretriever-ranking-ms:
     container_name: nemoretriever-ranking-ms
@@ -219,7 +219,7 @@ services:
     profiles: ["", "ingest"]
 
   nemoretriever-ocr:
-    image: ${NEMORETRIEVER_OCR_IMAGE:-nvcr.io/nvidia/nemo-microservices/nemoretriever-ocr-v1}:${NEMORETRIEVER_OCR_TAG:-latest}
+    image: ${NEMORETRIEVER_OCR_IMAGE:-nvcr.io/nvidia/nemo-microservices/nemoretriever-ocr-v1}:${NEMORETRIEVER_OCR_TAG:-1.0.0}
     shm_size: 2gb
     ports:
       - "8012:8000"
@@ -290,7 +290,7 @@ services:
 
   vlm-ms:
     container_name: nemo-vlm-microservice
-    image: nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-vl-8b-v1:1.3.0
+    image: nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-vl-8b-v1:1.3.1
     volumes:
     - ${MODEL_DIRECTORY:-./}:/opt/nim/.cache
     ports:
@@ -317,7 +317,7 @@ services:
 
   nim-llm-llama-8b:
     container_name: nim-llm-llama-8b
-    image: nvcr.io/nim/meta/llama-3.1-8b-instruct:1.8.4
+    image: nvcr.io/nim/meta/llama-3.1-8b-instruct:1.8.6
     volumes:
     - ${MODEL_DIRECTORY:-./}:/opt/nim/.cache
     user: "${USERID}"

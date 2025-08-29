@@ -81,6 +81,7 @@ from nvidia_rag.utils.llm import get_llm, get_prompts, get_streaming_filter_thin
 from nvidia_rag.utils.reranker import get_ranking_model
 from nvidia_rag.utils.vdb import _get_vdb_op
 from nvidia_rag.utils.vdb.vdb_base import VDBRag
+from observability.otel_metrics import OtelMetrics
 
 logger = logging.getLogger(__name__)
 CONFIG = get_config()
@@ -206,9 +207,28 @@ class NvidiaRAG:
             embedding_model=document_embedder,
         )
 
+    def _validate_collections_exist(
+        self, collection_names: list[str], vdb_op: VDBRag
+    ) -> None:
+        """Validate that all specified collections exist in the vector database.
+
+        Args:
+            collection_names: List of collection names to validate
+            vdb_op: Vector database operation instance
+        Raises:
+            APIError: If any collection does not exist
+        """
+        for collection_name in collection_names:
+            if not vdb_op.check_collection_exists(collection_name):
+                raise APIError(
+                    f"Collection {collection_name} does not exist. Ensure a collection is created using POST /collection endpoint first "
+                    f"and documents are uploaded using POST /document endpoint",
+                    400,
+                )
+
     def generate(
         self,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         use_knowledge_base: bool = True,
         temperature: float = default_temperature,
         top_p: float = default_top_p,
@@ -236,6 +256,8 @@ class NvidiaRAG:
         filter_expr: str | list[dict[str, Any]] = "",
         enable_query_decomposition: bool = CONFIG.query_decomposition.enable_query_decomposition,
         confidence_threshold: float = CONFIG.default_confidence_threshold,
+        rag_start_time_sec: float | None = None,
+        metrics: OtelMetrics | None = None,
     ) -> Generator[str, None, None]:
         """Execute a Retrieval Augmented Generation chain using the components defined above.
         It's called when the `/generate` API is invoked with `use_knowledge_base` set to `True` or `False`.
@@ -332,6 +354,8 @@ class NvidiaRAG:
                 vdb_op=vdb_op,
                 enable_query_decomposition=enable_query_decomposition,
                 confidence_threshold=confidence_threshold,
+                rag_start_time_sec=rag_start_time_sec,
+                metrics=metrics,
             )
         else:
             logger.info(
@@ -344,6 +368,7 @@ class NvidiaRAG:
                 model=model,
                 collection_name=collection_name,
                 enable_citations=enable_citations,
+                metrics=metrics,
             )
 
     def search(
@@ -430,6 +455,8 @@ class NvidiaRAG:
                     f"Only {MAX_COLLECTION_NAMES} collections are supported at a time.",
                     400,
                 )
+
+            self._validate_collections_exist(collection_names, vdb_op)
 
             metadata_schemas = {}
 
@@ -679,7 +706,7 @@ class NvidiaRAG:
                 max_loops = int(os.environ.get("MAX_REFLECTION_LOOP", 3))
                 reflection_counter = ReflectionCounter(max_loops)
                 docs, is_relevant = check_context_relevance(
-                    vdb_op=self.vdb_op,
+                    vdb_op=vdb_op,
                     retriever_query=retriever_query,
                     collection_names=validated_collections,
                     ranker=local_ranker,
@@ -748,14 +775,14 @@ class NvidiaRAG:
                         for future in futures:
                             docs.extend(future.result())
 
-                    start_time = time.time()
+                    context_reranker_start_time = time.time()
                     docs = context_reranker.invoke(
                         {"context": docs, "question": retriever_query},
                         config={"run_name": "context_reranker"},
                     )
                     logger.info(
                         "    == Context reranker time: %.2f ms ==",
-                        (time.time() - start_time) * 1000,
+                        (time.time() - context_reranker_start_time) * 1000,
                     )
 
                     # Normalize scores to 0-1 range"
@@ -804,11 +831,12 @@ class NvidiaRAG:
     def __llm_chain(
         self,
         llm_settings: dict[str, Any],
-        query: str,
-        chat_history: list[dict[str, str]],
+        query: str | list[dict[str, Any]],
+        chat_history: list[dict[str, Any]],
         model: str = "",
         collection_name: str = "",
         enable_citations: bool = True,
+        metrics: OtelMetrics | None = None,
     ) -> Generator[str, None, None]:
         """Execute a simple LLM chain using the components defined above.
         It's called when the `/generate` API is invoked with `use_knowledge_base` set to `False`.
@@ -844,16 +872,22 @@ class NvidiaRAG:
 
             for message in chat_history:
                 if message.get("role") == "system":
-                    system_prompt = system_prompt + " " + message.get("content")
-                else:
-                    conversation_history.append(
-                        (message.get("role"), message.get("content"))
+                    content_text = self._extract_text_from_content(
+                        message.get("content")
                     )
+                    system_prompt = system_prompt + " " + content_text
+                else:
+                    content_text = self._extract_text_from_content(
+                        message.get("content")
+                    )
+                    conversation_history.append((message.get("role"), content_text))
 
             system_message = [("system", system_prompt)]
 
-            logger.info("Query is: %s", query)
-            if query is not None and query != "":
+            # Extract text from query for processing
+            query_text = self._extract_text_from_content(query)
+            logger.info("Query is: %s", query_text)
+            if query_text is not None and query_text != "":
                 user_message += [("user", "{question}")]
 
             # Prompt template with system message, conversation history and
@@ -862,7 +896,7 @@ class NvidiaRAG:
                 system_message + nemotron_message + conversation_history + user_message
             )
 
-            self.__print_conversation_history(message, query)
+            self.__print_conversation_history(message, query_text)
 
             prompt_template = ChatPromptTemplate.from_messages(message)
             llm = get_llm(**llm_settings)
@@ -871,11 +905,14 @@ class NvidiaRAG:
                 prompt_template | llm | StreamingFilterThinkParser | StrOutputParser()
             )
             return generate_answer(
-                chain.stream({"question": query}, config={"run_name": "llm-stream"}),
+                chain.stream(
+                    {"question": query_text}, config={"run_name": "llm-stream"}
+                ),
                 [],
                 model=model,
                 collection_name=collection_name,
                 enable_citations=enable_citations,
+                otel_metrics_client=metrics,
             )
         except ConnectTimeout as e:
             logger.warning(
@@ -891,6 +928,7 @@ class NvidiaRAG:
                 model=model,
                 collection_name=collection_name,
                 enable_citations=enable_citations,
+                otel_metrics_client=metrics,
             )
 
         except Exception as e:
@@ -911,6 +949,7 @@ class NvidiaRAG:
                     model=model,
                     collection_name=collection_name,
                     enable_citations=enable_citations,
+                    otel_metrics_client=metrics,
                 )
             elif "[404] Not Found" in str(e):
                 logger.warning(
@@ -926,6 +965,7 @@ class NvidiaRAG:
                     model=model,
                     collection_name=collection_name,
                     enable_citations=enable_citations,
+                    otel_metrics_client=metrics,
                 )
             else:
                 return generate_answer(
@@ -934,13 +974,83 @@ class NvidiaRAG:
                     model=model,
                     collection_name=collection_name,
                     enable_citations=enable_citations,
+                    otel_metrics_client=metrics,
                 )
+
+    def _extract_text_from_content(self, content: Any) -> str:
+        """Extract text content from either string or multimodal content.
+
+        Args:
+            content: Either a string or a list of content objects (multimodal)
+
+        Returns:
+            str: Extracted text content
+        """
+        if isinstance(content, str):
+            return content
+        elif isinstance(content, list):
+            # Extract text from multimodal content
+            text_parts = []
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    text_parts.append(item.get("text", ""))
+                # Note: We ignore image_url content for text extraction
+            return " ".join(text_parts)
+        else:
+            # Fallback for any other content type
+            return str(content) if content is not None else ""
+
+    def _contains_images(self, content: Any) -> bool:
+        """Check if content contains any images.
+
+        Args:
+            content: Either a string or a list of content objects (multimodal)
+
+        Returns:
+            bool: True if content contains images, False otherwise
+        """
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "image_url":
+                    return True
+        return False
+
+    def _build_retriever_query_from_content(self, content: Any) -> str:
+        """Build retriever query from either string or multimodal content.
+        For multimodal content, includes both text and base64 images for VLM embedding support.
+
+        Args:
+            content: Either a string or a list of content objects (multimodal)
+
+        Returns:
+            str: Query string that may include base64 image data for VLM embeddings
+        """
+        if isinstance(content, str):
+            return content
+        elif isinstance(content, list):
+            # Build multimodal query with both text and base64 images
+            query_parts = []
+            for item in content:
+                if isinstance(item, dict):
+                    if item.get("type") == "text":
+                        text_content = item.get("text", "").strip()
+                        if text_content:
+                            query_parts.append(text_content)
+                    elif item.get("type") == "image_url":
+                        image_url = item.get("image_url", {}).get("url", "")
+                        if image_url:
+                            # Include the base64 image data for VLM embedding
+                            query_parts.append(image_url)
+            return "\n\n".join(query_parts)
+        else:
+            # Fallback for any other content type
+            return str(content) if content is not None else ""
 
     def __rag_chain(
         self,
         llm_settings: dict[str, Any],
-        query: str,
-        chat_history: list[dict[str, str]],
+        query: str | list[dict[str, Any]],
+        chat_history: list[dict[str, Any]],
         reranker_top_k: int = 10,
         vdb_top_k: int = 40,
         collection_name: str = "",
@@ -959,6 +1069,8 @@ class NvidiaRAG:
         vdb_op: VDBRag = None,
         enable_query_decomposition: bool = False,
         confidence_threshold: float = CONFIG.default_confidence_threshold,
+        rag_start_time_sec: float | None = None,
+        metrics: OtelMetrics | None = None,
     ) -> tuple[Generator[str, None, None], list[dict[str, Any]]]:
         """Execute a RAG chain using the components defined above.
         It's called when the `/generate` API is invoked with `use_knowledge_base` set to `True`.
@@ -984,9 +1096,10 @@ class NvidiaRAG:
             enable_filter_generator: Whether to enable automatic filter generation
             enable_query_decomposition: Whether to use iterative query decomposition for complex queries
         """
+        # TODO: Remove image whille printing logs and add image as place holder to not pollute logs
         logger.info(
             "Using multiturn rag to generate response from document for the query: %s",
-            query,
+            self._extract_text_from_content(query),
         )
 
         try:
@@ -1011,6 +1124,8 @@ class NvidiaRAG:
                     f"Only {MAX_COLLECTION_NAMES} collections are supported at a time.",
                     400,
                 )
+
+            self._validate_collections_exist(collection_names, vdb_op)
 
             metadata_schemas = {}
             if (
@@ -1106,6 +1221,8 @@ class NvidiaRAG:
             conversation_history = []
             system_prompt += prompts.get("rag_template", "")
             user_message = []
+            retrieval_time_ms = None
+            context_reranker_time_ms = None
 
             if "llama-3.3-nemotron-super-49b" in str(model):
                 if (
@@ -1121,14 +1238,19 @@ class NvidiaRAG:
 
             for message in chat_history:
                 if message.get("role") == "system":
-                    system_prompt = system_prompt + " " + message.get("content")
-                else:
-                    conversation_history.append(
-                        (message.get("role"), message.get("content"))
+                    content_text = self._extract_text_from_content(
+                        message.get("content")
                     )
+                    system_prompt = system_prompt + " " + content_text
+                else:
+                    content_text = self._extract_text_from_content(
+                        message.get("content")
+                    )
+                    conversation_history.append((message.get("role"), content_text))
 
             system_message = [("system", system_prompt)]
-            retriever_query = query
+            # Build retriever query from multimodal content (includes text and base64 images for VLM embedding)
+            retriever_query = self._build_retriever_query_from_content(query)
             if chat_history:
                 if enable_query_rewriting:
                     # Based on conversation history recreate query for better
@@ -1159,7 +1281,10 @@ class NvidiaRAG:
                     # query to be used for document retrieval
                     logger.info("Query rewriter prompt: %s", contextualize_q_prompt)
                     retriever_query = q_prompt.invoke(
-                        {"input": query, "chat_history": conversation_history},
+                        {
+                            "input": retriever_query,
+                            "chat_history": conversation_history,
+                        },
                         config={"run_name": "query-rewriter"},
                     )
                     logger.info(
@@ -1175,18 +1300,19 @@ class NvidiaRAG:
                             model=model,
                             collection_name=collection_name,
                             enable_citations=enable_citations,
+                            otel_metrics_client=metrics,
                         )
                 else:
                     # Use previous user queries and current query to form a
                     # single query for document retrieval
                     user_queries = [
-                        msg.get("content")
+                        self._build_retriever_query_from_content(msg.get("content"))
                         for msg in chat_history
                         if msg.get("role") == "user"
                     ]
                     # TODO: Find a better way to join this when queries already
                     # have punctuation
-                    retriever_query = ". ".join([*user_queries, query])
+                    retriever_query = ". ".join([*user_queries, retriever_query])
                     logger.info("Combined retriever query: %s", retriever_query)
 
             if enable_filter_generator:
@@ -1286,6 +1412,7 @@ class NvidiaRAG:
                     else "",
                     top_k=top_k,
                     confidence_threshold=confidence_threshold,
+                    llm_settings=llm_settings,
                 )
 
             if confidence_threshold > 0.0 and not enable_reranker:
@@ -1301,7 +1428,7 @@ class NvidiaRAG:
                 reflection_counter = ReflectionCounter(max_loops)
 
                 context_to_show, is_relevant = check_context_relevance(
-                    vdb_op=self.vdb_op,
+                    vdb_op=vdb_op,
                     retriever_query=retriever_query,
                     collection_names=validated_collections,
                     ranker=ranker,
@@ -1340,12 +1467,13 @@ class NvidiaRAG:
 
                     # Perform parallel retrieval from all vector stores
                     docs = []
+                    # Start measuring retrieval latency across collections
+                    retrieval_start_time = time.time()
                     vectorstores = []
                     for collection_name in validated_collections:
                         vectorstores.append(
                             vdb_op.get_langchain_vectorstore(collection_name)
                         )
-
                     with ThreadPoolExecutor() as executor:
                         futures = [
                             executor.submit(
@@ -1366,20 +1494,29 @@ class NvidiaRAG:
                         for future in futures:
                             docs.extend(future.result())
 
-                    start_time = time.time()
+                    retrieval_time_ms = (time.time() - retrieval_start_time) * 1000
+                    logger.info(
+                        "== Total retrieval time: %.2f ms ==", retrieval_time_ms
+                    )
+
+                    context_reranker_start_time = time.time()
                     docs = context_reranker.invoke(
-                        {"context": docs, "question": query},
+                        {"context": docs, "question": retriever_query},
                         config={"run_name": "context_reranker"},
                     )
+                    context_reranker_time_ms = (
+                        time.time() - context_reranker_start_time
+                    ) * 1000
                     logger.info(
                         "    == Context reranker time: %.2f ms ==",
-                        (time.time() - start_time) * 1000,
+                        context_reranker_time_ms,
                     )
                     context_to_show = docs.get("context", [])
                     # Normalize scores to 0-1 range
                     context_to_show = self.__normalize_relevance_scores(context_to_show)
                 else:
                     # Multiple retrievers are not supported when reranking is disabled
+                    retrieval_start_time = time.time()
                     docs = vdb_op.retrieval_langchain(
                         query=retriever_query,
                         collection_name=validated_collections[0],
@@ -1393,6 +1530,7 @@ class NvidiaRAG:
                         otel_ctx=otel_ctx,
                     )
                     context_to_show = docs
+                    retrieval_time_ms = (time.time() - retrieval_start_time) * 1000
 
             if ranker and enable_reranker and confidence_threshold > 0.0:
                 context_to_show = filter_documents_by_confidence(
@@ -1408,9 +1546,35 @@ class NvidiaRAG:
                     vlm_response = vlm.analyze_images_from_context(
                         context_to_show, query
                     )
-                    if vlm_response and vlm.reason_on_vlm_response(
-                        query, vlm_response, context_to_show, llm_settings
+                    should_use_vlm_response = False
+                    if vlm_response:
+                        if CONFIG.vlm.enable_vlm_response_reasoning:
+                            should_use_vlm_response = vlm.reason_on_vlm_response(
+                                query, vlm_response, context_to_show, llm_settings
+                            )
+                        else:
+                            # Reasoning gate disabled: always include VLM output
+                            should_use_vlm_response = True
+
+                    # If query contains images, or vlm_response_as_final_answer is enabled, return the vlm_response as the final answer
+                    if CONFIG.vlm.vlm_response_as_final_answer or self._contains_images(
+                        query
                     ):
+                        logger.info("VLM response as final answer: %s", vlm_response)
+                        return generate_answer(
+                            iter([vlm_response]),
+                            context_to_show,
+                            model=model,
+                            collection_name=collection_name,
+                            enable_citations=enable_citations,
+                        )
+                    else:
+                        logger.info("Query type: %s", type(query))
+                        logger.info(
+                            "VLM response not as final answer: %s", vlm_response
+                        )
+
+                    if vlm_response and should_use_vlm_response:
                         logger.info(
                             "VLM response validated and added to prompt: %s",
                             vlm_response,
@@ -1423,7 +1587,7 @@ class NvidiaRAG:
                         user_message += [("user", vlm_response_prompt)]
                     else:
                         logger.info(
-                            "VLM response skipped after reasoning or was empty."
+                            "VLM response skipped (empty or rejected by reasoning gate)."
                         )
                 except (OSError, ValueError) as e:
                     logger.warning(
@@ -1474,6 +1638,10 @@ class NvidiaRAG:
                     model=model,
                     collection_name=collection_name,
                     enable_citations=enable_citations,
+                    context_reranker_time_ms=context_reranker_time_ms,
+                    retrieval_time_ms=retrieval_time_ms,
+                    rag_start_time_sec=rag_start_time_sec,
+                    otel_metrics_client=metrics,
                 )
             else:
                 return generate_answer(
@@ -1485,6 +1653,10 @@ class NvidiaRAG:
                     model=model,
                     collection_name=collection_name,
                     enable_citations=enable_citations,
+                    context_reranker_time_ms=context_reranker_time_ms,
+                    retrieval_time_ms=retrieval_time_ms,
+                    rag_start_time_sec=rag_start_time_sec,
+                    otel_metrics_client=metrics,
                 )
 
         except ConnectTimeout as e:
@@ -1501,6 +1673,7 @@ class NvidiaRAG:
                 model=model,
                 collection_name=collection_name,
                 enable_citations=enable_citations,
+                otel_metrics_client=metrics,
             )
 
         except requests.exceptions.ConnectionError as e:
@@ -1516,6 +1689,7 @@ class NvidiaRAG:
                     model=model,
                     collection_name=collection_name,
                     enable_citations=enable_citations,
+                    otel_metrics_client=metrics,
                 )
 
         except Exception as e:
@@ -1536,6 +1710,7 @@ class NvidiaRAG:
                     model=model,
                     collection_name=collection_name,
                     enable_citations=enable_citations,
+                    otel_metrics_client=metrics,
                 )
             elif "[404] Not Found" in str(e):
                 logger.warning(
@@ -1551,6 +1726,7 @@ class NvidiaRAG:
                     model=model,
                     collection_name=collection_name,
                     enable_citations=enable_citations,
+                    otel_metrics_client=metrics,
                 )
             else:
                 return generate_answer(
@@ -1563,6 +1739,7 @@ class NvidiaRAG:
                     model=model,
                     collection_name=collection_name,
                     enable_citations=enable_citations,
+                    otel_metrics_client=metrics,
                 )
 
     def __print_conversation_history(

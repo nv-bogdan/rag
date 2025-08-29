@@ -29,7 +29,14 @@ class OtelMetrics:
         self._setup_metrics()
 
     def _setup_metrics(self):
-        """Initializes the OpenTelemetry metrics."""
+        """Initializes the OpenTelemetry metrics. Avoid duplicate instrument creation."""
+        # Guard against re-initialization in the same process
+        if hasattr(self, "api_request_counter"):
+            logging.info(
+                "OpenTelemetry Metrics already initialized; skipping re-creation"
+            )
+            return
+
         self.api_request_counter = self.meter.create_counter(
             "api_requests_total", description="Total API requests"
         )
@@ -49,6 +56,25 @@ class OtelMetrics:
             "token_usage_distribution",
             description="Token usage distribution per request",
         )
+
+        # ---------------- Latency histograms ----------------
+        self.latency_hists: dict[str, any] = {
+            "rag_ttft_ms": self.meter.create_histogram(
+                "rag_ttft_ms", description="RAG time-to-first-token latency"
+            ),
+            "llm_ttft_ms": self.meter.create_histogram(
+                "llm_ttft_ms", description="LLM time-to-first-token latency"
+            ),
+            "context_reranker_time_ms": self.meter.create_histogram(
+                "context_reranker_time_ms", description="Context reranker latency"
+            ),
+            "retrieval_time_ms": self.meter.create_histogram(
+                "retrieval_time_ms", description="Document retrieval latency"
+            ),
+            "llm_generation_time_ms": self.meter.create_histogram(
+                "llm_generation_time_ms", description="LLM generation latency"
+            ),
+        }
         logging.info("OpenTelemetry Metrics Initialized")
 
     def update_api_requests(self, method: str = None, endpoint: str = None):
@@ -74,3 +100,23 @@ class OtelMetrics:
         if avg_words_per_chunk is not None:
             self.avg_words_per_chunk_gauge.set(avg_words_per_chunk)
             logging.info(f"Avg words per chunk: {avg_words_per_chunk}")
+
+    # ------------------- Latency metrics -------------------
+
+    def update_latency_metrics(self, metrics: dict[str, float]):
+        """Record latency metrics into histograms (ms)."""
+        for name, value in metrics.items():
+            hist = self.latency_hists.get(name)
+            if hist and value is not None:
+                hist.record(value)
+
+
+# Singleton factory to reuse a single OtelMetrics instance per process
+_singleton_metrics: OtelMetrics | None = None
+
+
+def get_otel_metrics(service_name: str = "rag") -> OtelMetrics:
+    global _singleton_metrics
+    if _singleton_metrics is None:
+        _singleton_metrics = OtelMetrics(service_name)
+    return _singleton_metrics

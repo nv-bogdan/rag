@@ -16,11 +16,11 @@ This document describes the configurable endpoints used by the RAG server and it
 
 ### LLM Model
 - **APP_LLM_SERVERURL**: URL for the LLM model service (default: "nim-llm:8000")
-- **APP_LLM_MODELNAME**: Name of the LLM model (default: "nvidia/llama-3.3-nemotron-super-49b-v1")
+- **APP_LLM_MODELNAME**: Name of the LLM model (default: "nvidia/llama-3_3-nemotron-super-49b-v1_5")
 
 ### Query Rewriter Model
 - **APP_QUERYREWRITER_SERVERURL**: URL for the query rewriter model service (default: "nim-llm:8000")
-- **APP_QUERYREWRITER_MODELNAME**: Name of the query rewriter model (default: "nvidia/llama-3.3-nemotron-super-49b-v1")
+- **APP_QUERYREWRITER_MODELNAME**: Name of the query rewriter model (default: "nvidia/llama-3_3-nemotron-super-49b-v1_5")
 
 ### Embedding Model
 - **APP_EMBEDDINGS_SERVERURL**: URL for the embedding model service (default: "nemo-retriever-embedding-ms:8000")
@@ -32,7 +32,7 @@ This document describes the configurable endpoints used by the RAG server and it
 
 ### Reflection Model
 - **REFLECTION_LLM_SERVERURL**: URL for the reflection LLM service (default: "nim-llm:8000")
-- **REFLECTION_LLM**: Name of the reflection model (default: "nvidia/llama-3.3-nemotron-super-49b-v1")
+- **REFLECTION_LLM**: Name of the reflection model (default: "nvidia/llama-3_3-nemotron-super-49b-v1_5")
 
 ## Frontend Endpoints
 

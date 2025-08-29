@@ -3,7 +3,7 @@ services:
   # Main ingestor server which is responsible for ingestion
   ingestor-server:
     container_name: ingestor-server
-    image: nvcr.io/nvstaging/blueprint/ingestor-server:${TAG:-latest}
+    image: nvcr.io/nvstaging/blueprint/ingestor-server:${TAG:-2.3.0.rc1}
     build:
       # Set context to repo's root directory
       context: ../../
@@ -88,7 +88,7 @@ services:
       ENABLE_CITATIONS: ${ENABLE_CITATIONS:-True}
 
       # Choose the summary model to use for document summary
-      SUMMARY_LLM: ${SUMMARY_LLM:-nvidia/llama-3.3-nemotron-super-49b-v1}
+      SUMMARY_LLM: ${SUMMARY_LLM:-nvidia/llama-3_3-nemotron-super-49b-v1_5}
       SUMMARY_LLM_SERVERURL: ${SUMMARY_LLM_SERVERURL-"nim-llm:8000"}
       SUMMARY_LLM_MAX_CHUNK_LENGTH: ${SUMMARY_LLM_MAX_CHUNK_LENGTH:-50000}
       SUMMARY_CHUNK_OVERLAP: ${SUMMARY_CHUNK_OVERLAP:-200}
@@ -115,12 +115,12 @@ services:
     shm_size: 5gb
 
   redis:
-    image: "redis/redis-stack"
+    image: "redis/redis-stack:7.2.0-v18"
     ports:
       - "6379:6379"
 
   nv-ingest-ms-runtime:
-    image: nvcr.io/nvstaging/nim/nv-ingest:25.8.0-RC2
+    image: nvcr.io/nvstaging/nim/nv-ingest:25.8.0-RC6
     cpuset: "0-15"
     volumes:
       - ${DATASET_ROOT:-./data}:/workspace/data
@@ -143,7 +143,8 @@ services:
       # For VLM Embedding Model (Nemoretriever-1b-vlm-embed-v1)
       # - EMBEDDING_NIM_MODEL_NAME=${EMBEDDING_NIM_MODEL_NAME:-${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1}}
       # - EMBEDDING_NIM_ENDPOINT=${EMBEDDING_NIM_ENDPOINT:-${APP_EMBEDDINGS_SERVERURL-http://nemoretriever-vlm-embedding-ms:8000/v1}}
-      - INGEST_LOG_LEVEL=DEFAULT
+      - INGEST_LOG_LEVEL=WARNING
+      - INGEST_RAY_LOG_LEVEL=PRODUCTION
       - INGEST_EDGE_BUFFER_SIZE=64
       - INGEST_DYNAMIC_MEMORY_THRESHOLD=0.8
       - INGEST_DISABLE_DYNAMIC_SCALING=${INGEST_DISABLE_DYNAMIC_SCALING:-True}

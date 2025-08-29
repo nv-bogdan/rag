@@ -17,6 +17,7 @@
 
 import json
 import logging
+import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,19 @@ def _extract_filter_expression_from_response(response: Any) -> str | None:
     response = response.strip()
 
     if response.upper().startswith("NO_FILTER"):
+        return None
+
+    response = re.sub(r"<think>.*?</think>", "", response, flags=re.DOTALL)
+
+    if "<think>" in response:
+        response = re.sub(r"<think>.*", "", response, flags=re.DOTALL)
+
+    response = re.sub(r"\n\s*\n", "\n", response)
+    response = response.strip()
+
+    if not response:
+        logger.warning("No filter expression found after removing thinking tokens")
+
         return None
 
     return response

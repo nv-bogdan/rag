@@ -15,10 +15,14 @@
 
 import { MessageTextarea } from "./MessageTextarea";
 import { MessageActions } from "./MessageActions";
+import { ChatActionsMenu } from "./ChatActionsMenu";
 
 export const MessageInputContainer = () => (
   <div className="relative">
     <MessageTextarea />
+    <div className="absolute left-3 top-3">
+      <ChatActionsMenu />
+    </div>
     <MessageActions />
   </div>
 ); 

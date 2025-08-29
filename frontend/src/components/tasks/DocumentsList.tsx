@@ -53,6 +53,7 @@ export const DocumentsList = () => {
           key={doc.document_name}
           name={doc.document_name}
           metadata={doc.metadata}
+          collectionName={activeCollection?.collection_name || ""}
         />
       ))}
     </div>

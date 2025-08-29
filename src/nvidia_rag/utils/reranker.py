@@ -44,6 +44,10 @@ def _get_ranking_model(model="", url="", top_n=4) -> BaseDocumentCompressor:
 
     try:
         if settings.ranking.model_engine == "nvidia-ai-endpoints":
+            if top_n <= 0:
+                logger.warning("top_n must be a positive integer, setting to 4")
+                top_n = 4
+
             if url:
                 logger.info("Using ranking model hosted at %s", url)
                 return NVIDIARerank(base_url=url, top_n=top_n, truncate="END")

@@ -116,7 +116,7 @@ def check_context_relevance(
     reflection_llm_name = (
         get_env_variable(
             variable_name="REFLECTION_LLM",
-            default_value="nvidia/llama-3.3-nemotron-super-49b-v1",
+            default_value="nvidia/llama-3_3-nemotron-super-49b-v1_5",
         )
         .strip('"')
         .strip("'")
@@ -256,7 +256,7 @@ def check_response_groundedness(
     reflection_llm_name = (
         get_env_variable(
             variable_name="REFLECTION_LLM",
-            default_value="nvidia/llama-3.3-nemotron-super-49b-v1",
+            default_value="nvidia/llama-3_3-nemotron-super-49b-v1_5",
         )
         .strip('"')
         .strip("'")

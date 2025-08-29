@@ -22,6 +22,7 @@ Endpoints:
 """
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -471,6 +472,7 @@ class StorageHealthInfo(BaseServiceHealthInfo):
 class NIMServiceHealthInfo(BaseServiceHealthInfo):
     """Health info specific to NIM services (LLM, embeddings, etc.)"""
 
+    model: str | None = None
     message: str | None = None
     http_status: int | None = None
 
@@ -586,13 +588,102 @@ async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse
     """Generate and stream the response to the provided prompt."""
     generate_start_time = time.time()
 
+    # Helper function to sanitize message content for logging
+    def sanitize_content_for_logging(content):
+        """Remove image data from content for cleaner logging."""
+        if isinstance(content, str):
+            return content
+        elif isinstance(content, list):
+            sanitized_content = []
+            for item in content:
+                if hasattr(item, "type") and item.type == "image":
+                    # Replace image data with placeholder for logging
+                    sanitized_content.append(
+                        {
+                            "type": "image",
+                            "image_url": "[IMAGE_DATA_REMOVED_FOR_LOGGING]",
+                        }
+                    )
+                else:
+                    # Keep text content as is
+                    sanitized_content.append(
+                        item.dict() if hasattr(item, "dict") else item
+                    )
+            return sanitized_content
+        return content
+
+    request_data = {
+        "messages": [
+            {"role": msg.role, "content": sanitize_content_for_logging(msg.content)}
+            for msg in prompt.messages
+        ],
+        "use_knowledge_base": prompt.use_knowledge_base,
+        "temperature": prompt.temperature,
+        "top_p": prompt.top_p,
+        "max_tokens": prompt.max_tokens,
+        "stop": prompt.stop,
+        "reranker_top_k": prompt.reranker_top_k,
+        "vdb_top_k": prompt.vdb_top_k,
+        "vdb_endpoint": prompt.vdb_endpoint,
+        "collection_name": prompt.collection_name,
+        "collection_names": prompt.collection_names,
+        "enable_query_rewriting": prompt.enable_query_rewriting,
+        "enable_reranker": prompt.enable_reranker,
+        "enable_guardrails": prompt.enable_guardrails,
+        "enable_citations": prompt.enable_citations,
+        "enable_vlm_inference": prompt.enable_vlm_inference,
+        "enable_filter_generator": prompt.enable_filter_generator,
+        "model": prompt.model,
+        "llm_endpoint": prompt.llm_endpoint,
+        "embedding_model": prompt.embedding_model,
+        "embedding_endpoint": prompt.embedding_endpoint,
+        "reranker_model": prompt.reranker_model,
+        "reranker_endpoint": prompt.reranker_endpoint,
+        "vlm_model": prompt.vlm_model,
+        "vlm_endpoint": prompt.vlm_endpoint,
+        "filter_expr": prompt.filter_expr,
+        "confidence_threshold": prompt.confidence_threshold,
+    }
+    logger.info(
+        f"📥 Incoming request to /generate endpoint:\n{json.dumps(request_data, indent=2)}"
+    )
+
     if metrics:
         metrics.update_api_requests(method=request.method, endpoint=request.url.path)
     try:
         # Convert messages to list of dicts
-        messages_dict = [
-            {"role": msg.role, "content": msg.content} for msg in prompt.messages
-        ]
+        messages_dict = []
+        for msg in prompt.messages:
+            if isinstance(msg.content, str):
+                # Simple string content
+                messages_dict.append({"role": msg.role, "content": msg.content})
+            elif isinstance(msg.content, list):
+                # Array content with text and/or images
+                content_list = []
+                for content_item in msg.content:
+                    if hasattr(content_item, "type"):
+                        if content_item.type == "text":
+                            content_list.append(
+                                {"type": "text", "text": content_item.text}
+                            )
+                        elif content_item.type == "image_url":
+                            content_list.append(
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": content_item.image_url.url,
+                                        "detail": content_item.image_url.detail,
+                                    },
+                                }
+                            )
+                    else:
+                        # Fallback for dict-like content
+                        content_list.append(content_item)
+                # share input as a single string
+                messages_dict.append({"role": msg.role, "content": content_list})
+            else:
+                # Fallback for other content types
+                messages_dict.append({"role": msg.role, "content": msg.content})
 
         # Get the streaming generator from NVIDIA_RAG.generate
         response_generator = NVIDIA_RAG.generate(
@@ -623,6 +714,8 @@ async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse
             vlm_endpoint=prompt.vlm_endpoint,
             filter_expr=prompt.filter_expr,
             confidence_threshold=prompt.confidence_threshold,
+            rag_start_time_sec=generate_start_time,
+            metrics=metrics,
         )
 
         # Wrap the generator with TTFT calculation and buffering fixes
@@ -871,8 +964,8 @@ async def optimized_streaming_wrapper(generator: Generator, start_time: float):
         token_count += 1
 
         if token_count == 1:
-            ttft = (current_time - start_time) * 1000  # Convert to milliseconds
-            logger.info("    == RAG Time to First Token (TTFT): %.2f ms ==", ttft)
+            ttft_ms = (current_time - start_time) * 1000  # Convert to milliseconds
+            logger.info("    == RAG Time to First Token (TTFT): %.2f ms ==", ttft_ms)
 
         # Yield the chunk immediately without additional processing
         yield chunk

@@ -11,6 +11,10 @@ vi.mock('../MessageActions', () => ({
   MessageActions: () => <div data-testid="message-actions">Actions</div>
 }));
 
+vi.mock('../ChatActionsMenu', () => ({
+  ChatActionsMenu: () => <div data-testid="chat-actions-menu">Chat Actions</div>
+}));
+
 describe('MessageInputContainer', () => {
   describe('Child Component Rendering', () => {
     it('renders MessageTextarea component', () => {
@@ -25,10 +29,18 @@ describe('MessageInputContainer', () => {
       expect(screen.getByTestId('message-actions')).toBeInTheDocument();
     });
 
-    it('renders both components together', () => {
+    it('renders ChatActionsMenu component', () => {
       render(<MessageInputContainer />);
       
-      // Both should be present in the component
+      expect(screen.getByTestId('chat-actions-menu')).toBeInTheDocument();
+    });
+
+    it('renders all components together', () => {
+      render(<MessageInputContainer />);
+      
+      expect(screen.getByTestId('message-textarea')).toBeInTheDocument();
+      expect(screen.getByTestId('message-actions')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-actions-menu')).toBeInTheDocument();
       expect(document.querySelector('.relative')).toBeInTheDocument();
     });
   });
@@ -47,6 +59,7 @@ describe('MessageInputContainer', () => {
       
       expect(screen.getByTestId('message-textarea')).toBeInTheDocument();
       expect(screen.getByTestId('message-actions')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-actions-menu')).toBeInTheDocument();
     });
 
     it('uses relative positioning for action overlay', () => {

@@ -401,21 +401,23 @@ async def check_all_services_health() -> dict[str, list[dict[str, Any]]]:
             embed_url = f"http://{embed_url}/v1/health/ready"
         else:
             embed_url = f"{embed_url}/v1/health/ready"
-        tasks.append(
-            (
-                "nim",
-                check_service_health(
-                    url=embed_url,
-                    service_name=f"Embeddings ({config.embeddings.model_name})",
-                ),
+
+        # For local services, we need to create a custom result with model info
+        async def check_embed_health():
+            result = await check_service_health(
+                url=embed_url, service_name="Embeddings"
             )
-        )
+            result["model"] = config.embeddings.model_name
+            return result
+
+        tasks.append(("nim", check_embed_health()))
     else:
         # When URL is empty or from API catalog, assume the service is running via API catalog
         results["nim"].append(
             {
-                "service": f"Embeddings ({config.embeddings.model_name})",
-                "url": "NVIDIA API Catalog",
+                "service": "Embeddings",
+                "model": config.embeddings.model_name,
+                "url": config.embeddings.server_url,
                 "status": "healthy",
                 "latency_ms": 0,
                 "message": "Using NVIDIA API Catalog",
@@ -431,21 +433,21 @@ async def check_all_services_health() -> dict[str, list[dict[str, Any]]]:
             llm_url = f"http://{llm_url}/v1/health/ready"
         else:
             llm_url = f"{llm_url}/v1/health/ready"
-        tasks.append(
-            (
-                "nim",
-                check_service_health(
-                    url=llm_url,
-                    service_name=f"Summary LLM ({config.summarizer.model_name})",
-                ),
-            )
-        )
+
+        # For local services, we need to create a custom result with model info
+        async def check_summary_llm_health():
+            result = await check_service_health(url=llm_url, service_name="Summary LLM")
+            result["model"] = config.summarizer.model_name
+            return result
+
+        tasks.append(("nim", check_summary_llm_health()))
     else:
         # When URL is empty or from API catalog, assume the service is running via API catalog
         results["nim"].append(
             {
-                "service": f"Summary LLM ({config.summarizer.model_name})",
-                "url": "NVIDIA API Catalog",
+                "service": "Summary LLM",
+                "model": config.summarizer.model_name,
+                "url": config.summarizer.server_url,
                 "status": "healthy",
                 "latency_ms": 0,
                 "message": "Using NVIDIA API Catalog",
@@ -468,21 +470,23 @@ async def check_all_services_health() -> dict[str, list[dict[str, Any]]]:
                     )
                 elif not caption_url.endswith("/v1/health/ready"):
                     caption_url = f"{caption_url}/v1/health/ready"
-            tasks.append(
-                (
-                    "nim",
-                    check_service_health(
-                        url=caption_url,
-                        service_name=f"Caption Model ({config.nv_ingest.caption_model_name})",
-                    ),
+
+            # For local services, we need to create a custom result with model info
+            async def check_caption_health():
+                result = await check_service_health(
+                    url=caption_url, service_name="Caption Model"
                 )
-            )
+                result["model"] = config.nv_ingest.caption_model_name
+                return result
+
+            tasks.append(("nim", check_caption_health()))
         else:
             # When URL is empty or from API catalog, assume the service is running via API catalog
             results["nim"].append(
                 {
-                    "service": f"Caption Model ({config.nv_ingest.caption_model_name})",
-                    "url": "NVIDIA API Catalog"
+                    "service": "Caption Model",
+                    "model": config.nv_ingest.caption_model_name,
+                    "url": config.nv_ingest.caption_endpoint_url
                     if config.nv_ingest.caption_endpoint_url
                     else "Not configured",
                     "status": "healthy",

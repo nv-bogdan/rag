@@ -132,7 +132,7 @@ To deploy the `llama-3.1-8b-instruct` model in a separate namespace (`query-rewr
     ```
 
 ### 2. Enable Query Rewriter in `rag-server` Helm deployment
-1. Modify the [values.yaml](../deploy/helm/rag-server/values.yaml) file, in the `envVars` section, and set the following values.
+1. Modify the [values.yaml](../deploy/helm/nvidia-blueprint-rag/values.yaml) file, in the `envVars` section, and set the following values.
 
     ```yaml
        envVars:
@@ -145,12 +145,12 @@ To deploy the `llama-3.1-8b-instruct` model in a separate namespace (`query-rewr
 Follow the steps from [Quick Start Helm Deployment](./quickstart.md#deploy-with-helm-chart) and use the following command to deploy the chart.
 
 ```bash
-helm install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
-   --username '$oauthtoken' \
-   --password "${NGC_API_KEY}" \
-   --set imagePullSecret.password=$NGC_API_KEY \
+helm install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
+--username '$oauthtoken' \
+--password "${NGC_API_KEY}" \
+--set imagePullSecret.password=$NGC_API_KEY \
    --set ngcApiSecret.password=$NGC_API_KEY \
-   -f rag-server/values.yaml
+   -f deploy/helm/nvidia-blueprint-rag/values.yaml
 ```
 
 > [!NOTE]

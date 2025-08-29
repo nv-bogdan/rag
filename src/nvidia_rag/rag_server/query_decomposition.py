@@ -27,7 +27,7 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA, NVIDIAEmbeddings, NVIDIARe
 
 from nvidia_rag.rag_server.response_generator import generate_answer
 from nvidia_rag.utils.common import filter_documents_by_confidence, get_config
-from nvidia_rag.utils.llm import get_prompts, get_streaming_filter_think_parser
+from nvidia_rag.utils.llm import get_llm, get_prompts
 from nvidia_rag.utils.vdb.vdb_base import VDBRag
 
 # Configure logger
@@ -36,6 +36,12 @@ logger = logging.getLogger(__name__)
 # Configuration
 config = get_config()
 RECURSION_DEPTH = config.query_decomposition.recursion_depth
+
+# Update param for thinking off in query decomposition
+LLM_PARAMS = {
+    "temperature": 0,
+    "top_p": 1.0,
+}
 
 
 def format_conversation_history(history: list[tuple[str, str]]) -> str:
@@ -113,7 +119,12 @@ def generate_subqueries(query: str, llm: ChatNVIDIA) -> list[str]:
     """
     prompts = get_prompts()
     template = prompts.get("query_decomposition_multiquery_prompt")
-    prompt_perspectives = ChatPromptTemplate.from_template(template)
+    prompt_perspectives = ChatPromptTemplate.from_messages(
+        [
+            ("system", template.get("system")),
+            ("human", template.get("human")),
+        ]
+    )
 
     generate_queries = (
         prompt_perspectives
@@ -130,7 +141,7 @@ def generate_subqueries(query: str, llm: ChatNVIDIA) -> list[str]:
 
     questions = generate_queries.invoke({"question": query})
     logger.info(f"Generated {len(questions)} subqueries from original query")
-    logger.debug(f"Subqueries: {questions}")
+    logger.info(f"Subqueries: {questions}")
 
     return questions
 
@@ -154,20 +165,29 @@ def rewrite_query_with_context(
         return question
 
     prompts = get_prompts()
-    streaming_parser = get_streaming_filter_think_parser()
 
     query_rewriter_prompt = prompts.get("query_decompositions_query_rewriter_prompt")
-    query_rewriter = ChatPromptTemplate.from_template(query_rewriter_prompt)
-
-    query_rewriter_chain = query_rewriter | llm | streaming_parser | StrOutputParser()
-    rewritten_query = query_rewriter_chain.invoke(
-        {
-            "conversation_history": format_conversation_history(history),
-            "question": question,
-        }
+    query_rewriter = ChatPromptTemplate.from_messages(
+        [
+            ("system", query_rewriter_prompt.get("system")),
+            ("human", query_rewriter_prompt.get("human")),
+        ]
     )
 
-    logger.debug(f"Query rewritten: '{question}' -> '{rewritten_query}'")
+    query_rewriter_chain = query_rewriter | llm | StrOutputParser()
+
+    # Format the conversation history
+    formatted_history = format_conversation_history(history)
+
+    # Prepare the input for the chain
+    chain_input = {
+        "conversation_history": formatted_history,
+        "question": question,
+    }
+
+    rewritten_query = query_rewriter_chain.invoke(chain_input)
+
+    logger.info(f"Query rewritten: '{question}' -> '{rewritten_query}'")
     return rewritten_query.strip()
 
 
@@ -222,18 +242,19 @@ def generate_answer_for_query(
         Generated answer string
     """
     prompts = get_prompts()
-    streaming_parser = get_streaming_filter_think_parser()
 
-    system_prompt = prompts.get("rag_template")
-    system_message = [("system", system_prompt)]
-    user_message = [("user", "{question}")]
-    message = system_message + user_message
+    rag_template = prompts.get("query_decomposition_rag_template")
 
-    prompt = ChatPromptTemplate.from_messages(message)
-    rag_chain = prompt | llm | streaming_parser | StrOutputParser()
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", rag_template.get("system")),
+            ("human", rag_template.get("human")),
+        ]
+    )
+    rag_chain = prompt | llm | StrOutputParser()
 
     answer = rag_chain.invoke({"question": question, "context": documents})
-    logger.debug(f"Generated answer for question: '{question[:50]}...'")
+    logger.info(f"Generated answer for question: '{question[:50]}...'")
 
     return answer
 
@@ -257,15 +278,25 @@ def generate_followup_question(
         Follow-up question string (empty if no follow-up needed)
     """
     prompts = get_prompts()
-    streaming_parser = get_streaming_filter_think_parser()
 
-    followup_question_prompt = ChatPromptTemplate.from_template(
-        prompts.get("query_decomposition_followup_question_prompt")
+    followup_question_prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                prompts.get("query_decomposition_followup_question_prompt").get(
+                    "system"
+                ),
+            ),
+            (
+                "human",
+                prompts.get("query_decomposition_followup_question_prompt").get(
+                    "human"
+                ),
+            ),
+        ]
     )
 
-    followup_question_chain = (
-        followup_question_prompt | llm | streaming_parser | StrOutputParser()
-    )
+    followup_question_chain = followup_question_prompt | llm | StrOutputParser()
     followup_question = followup_question_chain.invoke(
         {
             "conversation_history": format_conversation_history(history),
@@ -282,7 +313,7 @@ def generate_followup_question(
     else:
         logger.info("No follow-up question needed")
 
-    return followup_question if cleaned_followup else ""
+    return cleaned_followup if cleaned_followup else ""
 
 
 def process_subqueries(
@@ -316,7 +347,7 @@ def process_subqueries(
 
         # Rewrite query with context from previous answers
         rewritten_query = rewrite_query_with_context(question, history, llm)
-        logger.debug(f"Rewritten query: {rewritten_query}")
+        logger.info(f"Rewritten query: {rewritten_query}")
 
         # Retrieve and rank documents
         retrieved_docs = retrieve_and_rank_documents(
@@ -333,7 +364,7 @@ def process_subqueries(
 
         # Generate answer
         answer = generate_answer_for_query(rewritten_query, retrieved_docs, llm)
-        logger.debug(f"Generated answer length: {len(answer)} characters")
+        logger.info(f"Generated answer: {answer}")
 
         history.append((question, answer))
 
@@ -364,14 +395,16 @@ def generate_final_response(
         Generated response stream
     """
     prompts = get_prompts()
-    streaming_parser = get_streaming_filter_think_parser()
 
     final_response_prompt = prompts.get("query_decomposition_final_response_prompt")
-    final_response_generator = ChatPromptTemplate.from_template(final_response_prompt)
-
-    final_response_chain = (
-        final_response_generator | llm | streaming_parser | StrOutputParser()
+    final_response_generator = ChatPromptTemplate.from_messages(
+        [
+            ("system", final_response_prompt.get("system")),
+            ("human", final_response_prompt.get("human")),
+        ]
     )
+
+    final_response_chain = final_response_generator | llm | StrOutputParser()
 
     logger.info("Generating final comprehensive response")
 
@@ -401,6 +434,7 @@ def iterative_query_decomposition(
     collection_name: str = config.vector_store.default_collection_name,
     top_k: int = config.retriever.top_k,
     confidence_threshold: float = config.default_confidence_threshold,
+    llm_settings: dict[str, Any] | None = None,
 ):
     """
     Decompose a complex query into simpler subqueries and generate a comprehensive answer.
@@ -430,6 +464,14 @@ def iterative_query_decomposition(
 
     logger.debug(f"Using retriever: {type(vdb_op).__name__}")
 
+    if llm_settings is None:
+        llm_settings = {}
+    # Update LLM params for thinking off in query decomposition
+    llm_params = LLM_PARAMS.copy()
+    llm_params["model"] = llm_settings.get("model", config.llm.model_name)
+    llm_params["llm_endpoint"] = llm_settings.get("llm_endpoint", config.llm.server_url)
+    logger.info(f"Using LLM: {llm_params}")
+    llm = get_llm(**llm_params)
     # Generate initial subqueries
     questions = generate_subqueries(query, llm)
 

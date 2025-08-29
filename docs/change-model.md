@@ -20,7 +20,7 @@ To change the inference model to a model from the API catalog,
 specify the model in the `APP_LLM_MODELNAME` environment variable when you start the RAG Server.
 
 ```console
-APP_LLM_MODELNAME='nvidia/llama-3.3-nemotron-super-49b-v1' docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d --build
+APP_LLM_MODELNAME='nvidia/llama-3.3-nemotron-super-49b-v1.5' docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d --build
 ```
 
 To get a list of valid model names, use one of the following methods:

@@ -89,3 +89,48 @@ After tracing is enabled and running, you can view inputs and outputs of differe
   <p align="center">
   <img src="./assets/zipkin_ui_labelled.png" width="750">
   </p>
+
+
+## Enabling Observability with Helm
+
+To enable tracing and view the Zipkin or Grafana UI when deploying via Helm, follow these steps:
+
+### Enable OpenTelemetry Collector, Zipkin and Prometheus stack
+
+1. Modify `values.yaml`:
+
+   Update the `values.yaml` file to enable the OpenTelemetry Collector and Zipkin:
+
+   ```yaml
+   env:
+   # ... existing code ...
+   APP_TRACING_ENABLED: "True"
+
+   # ... existing code ...
+   serviceMonitor:
+   enabled: true
+   opentelemetry-collector:
+   enabled: true
+   # ... existing code ...
+
+   zipkin:
+   enabled: true
+   kube-prometheus-stack:
+   enabled: true
+   ```
+
+### Deploy the Changes
+
+Redeploy the Helm chart to apply these changes:
+
+```sh
+helm uninstall rag -n rag
+helm install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
+--username '$oauthtoken' \
+--password "${NGC_API_KEY}" \
+--set imagePullSecret.password=$NGC_API_KEY \
+--set ngcApiSecret.password=$NGC_API_KEY \
+-f deploy/helm/nvidia-blueprint-rag/values.yaml
+```
+
+For detailed information on tracing, refer to [Viewing Traces in Zipkin](#viewing-traces-in-zipkin).

@@ -53,7 +53,7 @@ def _get_vdb_op(
             "minio_endpoint": os.getenv("MINIO_ENDPOINT"),
             "access_key": os.getenv("MINIO_ACCESSKEY"),
             "secret_key": os.getenv("MINIO_SECRETKEY"),
-            "bucket_name": os.getenv("NVINGEST_MINIO_BUCKET", "nv-ingest"),
+            "bucket_name": os.getenv("NVINGEST_MINIO_BUCKET", "a-bucket"),
             # Hybrid search configurations
             "sparse": (CONFIG.vector_store.search_type == "hybrid"),
             # Additional configurations

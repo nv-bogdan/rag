@@ -32,6 +32,7 @@ from nvidia_rag.utils.common import get_config
 
 logger = logging.getLogger(__name__)
 CONFIG = get_config()
+DEFAULT_BUCKET_NAME = "default-bucket"
 
 
 class MinioOperator:
@@ -42,7 +43,7 @@ class MinioOperator:
         endpoint: str,
         access_key: str,
         secret_key: str,
-        default_bucket_name: str = "default-bucket",
+        default_bucket_name: str = DEFAULT_BUCKET_NAME,
     ):
         self.client = Minio(
             endpoint, access_key=access_key, secret_key=secret_key, secure=False
@@ -116,7 +117,9 @@ class MinioOperator:
             self.client.remove_object(self.default_bucket_name, object_name)
 
 
-def get_minio_operator():
+def get_minio_operator(
+    default_bucket_name: str = DEFAULT_BUCKET_NAME,
+) -> MinioOperator:
     """
     Prepares and return MinioOperator object
 
@@ -127,6 +130,7 @@ def get_minio_operator():
         endpoint=CONFIG.minio.endpoint,
         access_key=CONFIG.minio.access_key,
         secret_key=CONFIG.minio.secret_key,
+        default_bucket_name=default_bucket_name,
     )
     return minio_operator
 

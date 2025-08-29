@@ -128,6 +128,7 @@ class StorageHealthInfo(BaseServiceHealthInfo):
 class NIMServiceHealthInfo(BaseServiceHealthInfo):
     """Health info specific to NIM services (LLM, embeddings, etc.)"""
 
+    model: str | None = None
     message: str | None = None
     http_status: int | None = None
 
@@ -522,7 +523,7 @@ async def upload_document(
 
     try:
         # Store all provided file paths in a temporary directory
-        all_file_paths = process_file_paths(documents, request.collection_name)
+        all_file_paths = await process_file_paths(documents, request.collection_name)
         response_dict = await NV_INGEST_INGESTOR.upload_documents(
             filepaths=all_file_paths, **request.model_dump()
         )
@@ -600,7 +601,7 @@ async def update_documents(
 
     try:
         # Store all provided file paths in a temporary directory
-        all_file_paths = process_file_paths(documents, request.collection_name)
+        all_file_paths = await process_file_paths(documents, request.collection_name)
         response_dict = await NV_INGEST_INGESTOR.update_documents(
             filepaths=all_file_paths, **request.model_dump()
         )
@@ -956,7 +957,7 @@ async def delete_collections(
         )
 
 
-def process_file_paths(filepaths: list[str], collection_name: str):
+async def process_file_paths(filepaths: list[str], collection_name: str):
     """Process the file paths and return the list of file paths."""
 
     base_upload_folder = Path(
@@ -966,6 +967,7 @@ def process_file_paths(filepaths: list[str], collection_name: str):
     all_file_paths = []
 
     for file in filepaths:
+        await NV_INGEST_INGESTOR.validate_directory_traversal_attack(file.filename)
         upload_file = os.path.basename(file.filename)
 
         if not upload_file:

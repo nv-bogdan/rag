@@ -70,3 +70,24 @@ export function useDeleteAllDocuments() {
     },
   });
 }
+
+export function useDeleteDocument() {
+  return useMutation({
+    mutationFn: async ({ collectionName, documentName }: { collectionName: string; documentName: string }) => {
+      const res = await fetch(
+        `/api/documents?collection_name=${encodeURIComponent(collectionName)}`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify([documentName]),
+        }
+      );
+      if (!res.ok) {
+        let message = "Failed to delete document";
+        try { const err = await res.json(); message = err.message || message; } catch {}
+        throw new Error(message);
+      }
+      return res.json();
+    },
+  });
+}

@@ -44,7 +44,7 @@ export const MessageTextarea = ({
 
   return (
     <textarea
-      className="w-full resize-none rounded-lg bg-neutral-800 border border-neutral-700 py-3 pl-3 pr-14 text-white text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[var(--nv-green)]/50 focus:border-[var(--nv-green)]/50 transition-all duration-200 placeholder-gray-400"
+      className="w-full resize-none rounded-lg bg-neutral-800 border border-neutral-700 py-3 pl-12 pr-14 text-white text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[var(--nv-green)]/50 focus:border-[var(--nv-green)]/50 transition-all duration-200 placeholder-gray-400"
       placeholder={placeholder}
       rows={1}
       value={input}

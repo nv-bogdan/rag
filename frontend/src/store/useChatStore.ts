@@ -27,6 +27,7 @@ interface ChatState {
   setFilters: (filters: Filter[]) => void;
   addMessage: (msg: ChatMessage) => void;
   updateMessage: (id: string, update: Partial<ChatMessage>) => void;
+  clearMessages: () => void;
   reset: () => void;
 }
 
@@ -48,18 +49,19 @@ export const useChatStore = create<ChatState>((set) => ({
   setInput: (input) => set({ input }),
   setFilters: (filters) => set({ filters }),
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
-updateMessage: (id, update) =>
-  set((s) => ({
-    messages: s.messages.map((m) =>
-      m.id === id
-        ? {
-            ...m,
-            ...update,
-            citations:
-              update.citations !== undefined ? update.citations : m.citations,
-          }
-        : m
-    ),
-  })),
+  updateMessage: (id, update) =>
+    set((s) => ({
+      messages: s.messages.map((m) =>
+        m.id === id
+          ? {
+              ...m,
+              ...update,
+              citations:
+                update.citations !== undefined ? update.citations : m.citations,
+            }
+          : m
+      ),
+    })),
+  clearMessages: () => set({ messages: [] }),
   reset: () => set({ messages: [], input: "", filters: [] }),
 }));

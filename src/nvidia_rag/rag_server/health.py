@@ -284,21 +284,22 @@ async def check_all_services_health() -> dict[str, list[dict[str, Any]]]:
             llm_url = f"http://{llm_url}/v1/health/ready"
         else:
             llm_url = f"{llm_url}/v1/health/ready"
-        tasks.append(
-            (
-                "nim",
-                check_service_health(
-                    url=llm_url, service_name=f"LLM ({config.llm.model_name})"
-                ),
-            )
-        )
+
+        # For local services, we need to create a custom result with model info
+        async def check_llm_health():
+            result = await check_service_health(url=llm_url, service_name="LLM")
+            result["model"] = config.llm.model_name
+            return result
+
+        tasks.append(("nim", check_llm_health()))
     else:
         # When URL is empty or from API catalog, assume the service is running
         # via API catalog
         results["nim"].append(
             {
-                "service": f"LLM ({config.llm.model_name})",
-                "url": "NVIDIA API Catalog",
+                "service": "LLM",
+                "model": config.llm.model_name,
+                "url": config.llm.server_url,
                 "status": "healthy",
                 "latency_ms": 0,
                 "message": "Using NVIDIA API Catalog",
@@ -317,22 +318,24 @@ async def check_all_services_health() -> dict[str, list[dict[str, Any]]]:
                 qr_url = f"http://{qr_url}/v1/health/ready"
             else:
                 qr_url = f"{qr_url}/v1/health/ready"
-            tasks.append(
-                (
-                    "nim",
-                    check_service_health(
-                        url=qr_url,
-                        service_name=f"Query Rewriter ({config.query_rewriter.model_name})",
-                    ),
+
+            # For local services, we need to create a custom result with model info
+            async def check_qr_health():
+                result = await check_service_health(
+                    url=qr_url, service_name="Query Rewriter"
                 )
-            )
+                result["model"] = config.query_rewriter.model_name
+                return result
+
+            tasks.append(("nim", check_qr_health()))
         else:
             # When URL is empty or from API catalog, assume the service is
             # running via API catalog
             results["nim"].append(
                 {
-                    "service": f"Query Rewriter ({config.query_rewriter.model_name})",
-                    "url": "NVIDIA API Catalog",
+                    "service": "Query Rewriter",
+                    "model": config.query_rewriter.model_name,
+                    "url": config.query_rewriter.server_url,
                     "status": "healthy",
                     "latency_ms": 0,
                     "message": "Using NVIDIA API Catalog",
@@ -348,22 +351,24 @@ async def check_all_services_health() -> dict[str, list[dict[str, Any]]]:
             embed_url = f"http://{embed_url}/v1/health/ready"
         else:
             embed_url = f"{embed_url}/v1/health/ready"
-        tasks.append(
-            (
-                "nim",
-                check_service_health(
-                    url=embed_url,
-                    service_name=f"Embeddings ({config.embeddings.model_name})",
-                ),
+
+        # For local services, we need to create a custom result with model info
+        async def check_embed_health():
+            result = await check_service_health(
+                url=embed_url, service_name="Embeddings"
             )
-        )
+            result["model"] = config.embeddings.model_name
+            return result
+
+        tasks.append(("nim", check_embed_health()))
     else:
         # When URL is empty or from API catalog, assume the service is running
         # via API catalog
         results["nim"].append(
             {
-                "service": f"Embeddings ({config.embeddings.model_name})",
-                "url": "NVIDIA API Catalog",
+                "service": "Embeddings",
+                "model": config.embeddings.model_name,
+                "url": config.embeddings.server_url,
                 "status": "healthy",
                 "latency_ms": 0,
                 "message": "Using NVIDIA API Catalog",
@@ -381,22 +386,24 @@ async def check_all_services_health() -> dict[str, list[dict[str, Any]]]:
                 ranking_url = f"http://{ranking_url}/v1/health/ready"
             else:
                 ranking_url = f"{ranking_url}/v1/health/ready"
-            tasks.append(
-                (
-                    "nim",
-                    check_service_health(
-                        url=ranking_url,
-                        service_name=f"Ranking ({config.ranking.model_name})",
-                    ),
+
+            # For local services, we need to create a custom result with model info
+            async def check_ranking_health():
+                result = await check_service_health(
+                    url=ranking_url, service_name="Ranking"
                 )
-            )
+                result["model"] = config.ranking.model_name
+                return result
+
+            tasks.append(("nim", check_ranking_health()))
         else:
             # When URL is empty or from API catalog, assume the service is
             # running via API catalog
             results["nim"].append(
                 {
-                    "service": f"Ranking ({config.ranking.model_name})",
-                    "url": "NVIDIA API Catalog",
+                    "service": "Ranking",
+                    "model": config.ranking.model_name,
+                    "url": config.ranking.server_url,
                     "status": "healthy",
                     "latency_ms": 0,
                     "message": "Using NVIDIA API Catalog",
@@ -440,21 +447,25 @@ async def check_all_services_health() -> dict[str, list[dict[str, Any]]]:
                 reflection_url = f"http://{reflection_url}/v1/health/ready"
             else:
                 reflection_url = f"{reflection_url}/v1/health/ready"
-            tasks.append(
-                (
-                    "nim",
-                    check_service_health(
-                        url=reflection_url,
-                        service_name=f"Reflection LLM ({reflection_llm})",
-                    ),
+
+            # For local services, we need to create a custom result with model info
+            async def check_reflection_health():
+                result = await check_service_health(
+                    url=reflection_url, service_name="Reflection LLM"
                 )
-            )
+                result["model"] = reflection_llm
+                return result
+
+            tasks.append(("nim", check_reflection_health()))
         else:
             # When URL is empty, assume the service is running via API catalog
             results["nim"].append(
                 {
-                    "service": f"Reflection LLM ({reflection_llm})",
-                    "url": "NVIDIA API Catalog",
+                    "service": "Reflection LLM",
+                    "model": reflection_llm,
+                    "url": os.getenv("REFLECTION_LLM_SERVERURL", "")
+                    .strip('"')
+                    .strip("'"),
                     "status": "healthy",
                     "latency_ms": 0,
                     "message": "Using NVIDIA API Catalog",

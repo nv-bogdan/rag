@@ -43,7 +43,7 @@ The following are the default components included in this blueprint:
 
 * NVIDIA NIM Microservices
    * Response Generation (Inference)
-      * [NIM of nvidia/llama-3.3-nemotron-super-49b-v1](https://build.nvidia.com/nvidia/llama-3_3-nemotron-super-49b-v1)
+      * [NIM of nvidia/llama-3.3-nemotron-super-49b-v1](https://build.nvidia.com/nvidia/llama-3_3-nemotron-super-49b-v1_5)
     * Retriever Models
       * [NIM of nvidia/llama-3_2-nv-embedqa-1b-v2]( https://build.nvidia.com/nvidia/llama-3_2-nv-embedqa-1b-v2)
       * [NIM of nvidia/llama-3_2-nv-rerankqa-1b-v2](https://build.nvidia.com/nvidia/llama-3_2-nv-rerankqa-1b-v2)
@@ -58,6 +58,7 @@ The following are the default components included in this blueprint:
     * [Llama 3.1 NemoGuard 8B Topic Control NIM](https://build.nvidia.com/nvidia/llama-3_1-nemoguard-8b-topic-control)
     * [Llama-3.1 Nemotron-nano-vl-8b-v1 NIM](https://build.nvidia.com/nvidia/llama-3.1-nemotron-nano-vl-8b-v1)
     * [NeMo Retriever Parse NIM](https://build.nvidia.com/nvidia/nemoretriever-parse)
+    * [llama-3.2-nemoretriever-1b-vlm-embed-v1](https://build.nvidia.com/nvidia/llama-3_2-nemoretriever-1b-vlm-embed-v1)
 
 * RAG Orchestrator server - Langchain based
 * Milvus Vector Database - accelerated with NVIDIA cuVS
@@ -148,6 +149,7 @@ The following are some of the features that you can enable:
 - [Enable hybrid search](docs/hybrid_search.md)
 - [Enable Query decomposition support](docs/query_decomposition.md)
 - [Enable image captioning support for ingested documents](docs/image_captioning.md)
+- [Enable VLM embedding support](docs/vlm-embed.md)
 - [Enable multi-collection retrieval](docs/multi-collection-retrieval.md)
 - [Enable NeMo Guardrails for guardrails at input/output](docs/nemo-guardrails.md)
 - [Enable observability support](./docs/observability.md)
@@ -160,6 +162,7 @@ The following are some of the features that you can enable:
 - [Enabling Summarization](docs/summarization.md)
 - [Enable text-only ingestion of files](docs/text_only_ingest.md)
 - [Enable VLM based inferencing in RAG](docs/vlm.md)
+- [Multimodal Input Guide](docs/multimodal_input_guide.md)
 - [Change the Vector Database Backend](docs/change-vectordb.md)
 
 

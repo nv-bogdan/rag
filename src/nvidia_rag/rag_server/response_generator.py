@@ -27,7 +27,9 @@ import logging
 import os
 import time
 from collections.abc import Generator
-from typing import Any, Literal
+
+# Added for metrics tracking
+from typing import Any, Literal, Optional, Union
 from uuid import uuid4
 
 import bleach
@@ -36,6 +38,7 @@ from pydantic import BaseModel, Field, validator
 from pymilvus.exceptions import MilvusException, MilvusUnavailableException
 
 from nvidia_rag.utils.minio_operator import get_minio_operator, get_unique_thumbnail_id
+from observability.otel_metrics import OtelMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -172,6 +175,40 @@ class Citations(BaseModel):
     )
 
 
+class ImageUrl(BaseModel):
+    """Image URL content for message."""
+
+    url: str = Field(
+        description="Either a URL of the image or the base64 encoded image data. "
+        "Supports data URIs in the format data:image/jpeg;base64,<base64-data>",
+        max_length=20971520,  # 20 MB  # Allow for large base64 encoded images
+    )
+    detail: Literal["low", "high", "auto"] = Field(
+        default="auto",
+        description="Specifies the detail level for image processing. "
+        "This field maintains OpenAI API compatibility but may not affect processing "
+        "in NVIDIA RAG's internal VLM pipeline. Future integrations may utilize this field.",
+    )
+
+
+class TextContent(BaseModel):
+    """Text content for message."""
+
+    type: Literal["text"] = Field(default="text", description="The type of content")
+    text: str = Field(
+        description="The text content", max_length=131072, pattern=r"[\s\S]*"
+    )
+
+
+class ImageContent(BaseModel):
+    """Image content for message."""
+
+    type: Literal["image_url"] = Field(
+        default="image_url", description="The type of content"
+    )
+    image_url: ImageUrl = Field(description="The image URL object")
+
+
 class Message(BaseModel):
     """Definition of the Chat Message type."""
 
@@ -179,11 +216,10 @@ class Message(BaseModel):
         description="Role for a message: either 'user' or 'assistant' or 'system",
         default="user",
     )
-    content: str = Field(
-        description="The input query/prompt to the pipeline.",
+    content: str | list[TextContent | ImageContent] = Field(
+        description="The input query/prompt to the pipeline. Can be a string for text-only messages, "
+        "or an array of content objects for multimodal messages containing text and/or images.",
         default="Hello! What can you help me with?",
-        max_length=131072,
-        pattern=r"[\s\S]*",
     )
 
     @validator("role")
@@ -200,8 +236,18 @@ class Message(BaseModel):
     @validator("content")
     @classmethod
     def sanitize_content(cls, v):
-        """Feild validator function to santize user populated feilds from HTML"""
-        return bleach.clean(v, strip=True)
+        """Field validator function to sanitize user populated fields from HTML"""
+        if isinstance(v, str):
+            return bleach.clean(v, strip=True)
+        elif isinstance(v, list):
+            # For list content, sanitize text content but leave image URLs as-is
+            sanitized_content = []
+            for item in v:
+                if isinstance(item, TextContent):
+                    item.text = bleach.clean(item.text, strip=True)
+                sanitized_content.append(item)
+            return sanitized_content
+        return v
 
 
 class ChainResponseChoices(BaseModel):
@@ -211,6 +257,36 @@ class ChainResponseChoices(BaseModel):
     message: Message = Field(default=Message(role="assistant", content=""))
     delta: Message = Field(default=Message(role=None, content=""))
     finish_reason: str | None = Field(default=None, max_length=4096, pattern=r"[\s\S]*")
+
+
+class Metrics(BaseModel):
+    """Latency metrics associated with a single request."""
+
+    rag_ttft_ms: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="RAG time-to-first-token in milliseconds (populated in server wrapper)",
+    )
+    llm_ttft_ms: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="LLM time-to-first-token in milliseconds",
+    )
+    context_reranker_time_ms: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Latency of the context reranker in milliseconds",
+    )
+    retrieval_time_ms: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Latency to retrieve documents from VDB in milliseconds",
+    )
+    llm_generation_time_ms: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Total time for LLM response generation in milliseconds",
+    )
 
 
 class ChainResponse(BaseModel):
@@ -226,18 +302,25 @@ class ChainResponse(BaseModel):
     # Place holder fields for now to match generate API response structure
     usage: Usage | None = Field(default=Usage(), description="Token usage statistics")
     citations: Citations | None = Field(
-        default=Citations(), description="Source documents used for the response"
+        default=Citations(),
+        description="Sources or citations supporting the response",
+    )
+    metrics: Metrics | None | None = Field(
+        default=Metrics(),
+        description="Latency metrics associated with the request",
     )
 
 
-def prepare_llm_request(messages: list[dict[str, str]], **kwargs) -> dict[str, Any]:
+def prepare_llm_request(messages: list[dict[str, Any]], **kwargs) -> dict[str, Any]:
     """Prepare the request for the LLM response generation."""
 
     logger.debug(f"Prompt: {messages}")
     chat_history = [
         msg
         for msg in messages
-        if not (msg.get("role") == "assistant" and not msg.get("content", "").strip())
+        if not (
+            msg.get("role") == "assistant" and not _is_empty_content(msg.get("content"))
+        )
     ]
 
     # Find the last user message and its index
@@ -250,7 +333,7 @@ def prepare_llm_request(messages: list[dict[str, str]], **kwargs) -> dict[str, A
             break
 
     if last_user_message:
-        last_user_message = escape_json_content(last_user_message)
+        last_user_message = escape_json_content_multimodal(last_user_message)
 
     # Process chat history and escape JSON-like structures
     processed_chat_history = []
@@ -261,7 +344,7 @@ def prepare_llm_request(messages: list[dict[str, str]], **kwargs) -> dict[str, A
         # Create new Message with escaped content
         processed_message = {
             "role": message.get("role"),
-            "content": escape_json_content(message.get("content", "")),
+            "content": escape_json_content_multimodal(message.get("content", "")),
         }
         processed_chat_history.append(processed_message)
 
@@ -277,6 +360,10 @@ async def generate_answer(
     model: str = "",
     collection_name: str = "",
     enable_citations: bool = True,
+    context_reranker_time_ms: float | None = None,
+    retrieval_time_ms: float | None = None,
+    rag_start_time_sec: float | None = None,
+    otel_metrics_client: OtelMetrics | None = None,
 ):
     """Generate and stream the response to the provided prompt.
 
@@ -286,6 +373,7 @@ async def generate_answer(
         model: Name of the model used for generation
         collection_name: Name of the collection used for retrieval
         enable_citations: Whether to enable citations in the response
+        otel_metrics_client: Optional OpenTelemetry metrics client for updating latency histograms
     """
 
     try:
@@ -295,7 +383,11 @@ async def generate_answer(
             logger.debug("Generated response chunks\n")
             # Create ChainResponse object for every token generated
             first_chunk = True
-            start_time = time.time()
+            request_start_time = time.time()
+            start_time = request_start_time  # For LLM TTFT calculation
+            llm_ttft_ms: float | None = None
+            rag_ttft_ms: float | None = None
+            llm_generation_time_ms: float | None = None
             for chunk in generator:
                 # TODO: This is a hack to clear contexts if we get an error
                 # response from nemoguardrails
@@ -315,10 +407,18 @@ async def generate_answer(
                 chain_response.object = "chat.completion.chunk"
                 chain_response.created = int(time.time())
                 if first_chunk:
+                    llm_ttft_ms = (time.time() - start_time) * 1000
                     logger.info(
                         "    == LLM Time to First Token (TTFT): %.2f ms ==",
-                        (time.time() - start_time) * 1000,
+                        llm_ttft_ms,
                     )
+                    # RAG TTFT from server request start (if provided)
+                    if rag_start_time_sec is not None:
+                        rag_ttft_ms = (time.time() - rag_start_time_sec) * 1000
+                        logger.info(
+                            "    == RAG Time to First Token (TTFT): %.2f ms ==",
+                            rag_ttft_ms,
+                        )
                     chain_response.citations = prepare_citations(
                         retrieved_documents=contexts,
                         enable_citations=enable_citations,
@@ -328,7 +428,42 @@ async def generate_answer(
                 # Send generator with tokens in ChainResponse format
                 yield "data: " + str(chain_response.json()) + "\n\n"
 
+            # Prepare metrics for final chunk
+            llm_generation_time_ms = (time.time() - request_start_time) * 1000
+
+            final_metrics = Metrics(
+                rag_ttft_ms=rag_ttft_ms,
+                llm_ttft_ms=llm_ttft_ms if llm_ttft_ms else None,
+                context_reranker_time_ms=context_reranker_time_ms
+                if context_reranker_time_ms
+                else None,
+                retrieval_time_ms=retrieval_time_ms if retrieval_time_ms else None,
+                llm_generation_time_ms=llm_generation_time_ms
+                if llm_generation_time_ms
+                else None,
+            )
+
+            # Update OpenTelemetry latency histograms
+            try:
+                if otel_metrics_client is not None:
+                    latency_payload = {
+                        "rag_ttft_ms": rag_ttft_ms,
+                        "llm_ttft_ms": llm_ttft_ms,
+                        "context_reranker_time_ms": context_reranker_time_ms,
+                        "retrieval_time_ms": retrieval_time_ms,
+                        "llm_generation_time_ms": llm_generation_time_ms,
+                    }
+                    latency_payload = {
+                        k: v for k, v in latency_payload.items() if v is not None
+                    }
+                    if latency_payload:
+                        otel_metrics_client.update_latency_metrics(latency_payload)
+            except Exception as e:
+                logger.debug("Failed to update OpenTelemetry latency metrics: %s", e)
+
+            # Create response first, then attach metrics for clarity
             chain_response = ChainResponse()
+            chain_response.metrics = final_metrics
 
             # [DONE] indicate end of response from server
             response_choice = ChainResponseChoices(
@@ -556,7 +691,7 @@ async def retrieve_summary(
 
         # If wait=True, poll for summary with timeout
         start_time = time.time()
-        while time.time() - start_time < timeout:
+        while time.time() - start_time < min(3600, timeout):
             payload = get_minio_operator().get_payload(object_name=unique_thumbnail_id)
             if payload:
                 return {
@@ -585,7 +720,47 @@ async def retrieve_summary(
         }
 
 
-# Helper function to escape JSON-like structures in content
+# Helper functions for content processing
+def _is_empty_content(content: Any) -> bool:
+    """Check if content is empty (handles both string and list content)."""
+    if isinstance(content, str):
+        return not content.strip()
+    elif isinstance(content, list):
+        # Check if all text content in the list is empty
+        for item in content:
+            if isinstance(item, dict):
+                if item.get("type") == "text" and item.get("text", "").strip():
+                    return False
+                elif item.get("type") == "image_url":
+                    # Images are considered non-empty content
+                    return False
+        return True
+    return True
+
+
+def escape_json_content_multimodal(content: Any) -> Any:
+    """Escape JSON-like structures in content (handles both string and multimodal content)."""
+    if isinstance(content, str):
+        return escape_json_content(content)
+    elif isinstance(content, list):
+        # Process list content (multimodal messages)
+        processed_content = []
+        for item in content:
+            if isinstance(item, dict):
+                if item.get("type") == "text":
+                    # Escape text content
+                    processed_item = item.copy()
+                    processed_item["text"] = escape_json_content(item.get("text", ""))
+                    processed_content.append(processed_item)
+                else:
+                    # Keep image_url and other content types as-is
+                    processed_content.append(item)
+            else:
+                processed_content.append(item)
+        return processed_content
+    return content
+
+
 def escape_json_content(content: str) -> str:
     """Escape curly braces in content to avoid JSON parsing issues"""
     return content.replace("{", "{{").replace("}", "}}")

@@ -92,12 +92,12 @@ If you're using Helm for deployment, follow these steps to enable audio ingestio
 3. Apply the updated Helm chart by running the following code.
 
    ```bash
-   helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
-   --username '$oauthtoken' \
-   --password "${NGC_API_KEY}" \
-   --set imagePullSecret.password=$NGC_API_KEY \
+   helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
+    --username '$oauthtoken' \
+    --password "${NGC_API_KEY}" \
+    --set imagePullSecret.password=$NGC_API_KEY \
    --set ngcApiSecret.password=$NGC_API_KEY \
-   -f rag-server/values.yaml
+   -f deploy/helm/nvidia-blueprint-rag/values.yaml
    ```
 
 4. Verify that the riva-nim pod is running:

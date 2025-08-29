@@ -47,7 +47,7 @@ export APP_RANKING_SERVERURL="nemoretriever-ranking-ms:8000"
 
 ### For Helm Deployment
 
-The reranker settings are configured in `deploy/helm/rag-server/values.yaml`. Ensure the following settings are enabled (these are enabled by default):
+The reranker settings are configured in `deploy/helm/nvidia-blueprint-rag/values.yaml`. Ensure the following settings are enabled (these are enabled by default):
 
 ```yaml
 envVars:
@@ -143,7 +143,7 @@ environment:
   VECTOR_DB_TOPK: ${VECTOR_DB_TOPK:-50}
 ```
 
-**For Helm**: Edit `deploy/helm/rag-server/values.yaml`:
+**For Helm**: Edit `deploy/helm/nvidia-blueprint-rag/values.yaml`:
 ```yaml
 envVars:
   # Reduce from default "100" to a lower value

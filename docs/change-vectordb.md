@@ -51,11 +51,15 @@ Use the following steps to configure Elasticsearch as your vector database in Do
    docker compose -f deploy/compose/docker-compose-rag-server.yaml up -d
    ```
 
+4. Update the RAG UI configuration.
+
+   Access the RAG UI at `http://<host-ip>:8090`. In the UI, navigate to: Settings > Endpoint Configuration > Vector Database Endpoint → set to `http://elasticsearch:9200`.
+
 ## Helm
 
 If you're using Helm for deployment, use the following steps to configure Elasticsearch as your vector database.
 
-1. Update your `values.yaml` file to configure Elasticsearch as the vector database.
+1. Update your [`values.yaml`](../deploy/helm/nvidia-blueprint-rag/values.yaml) file to configure Elasticsearch as the vector database.
 
    ```yaml
    rag-server:
@@ -80,13 +84,15 @@ If you're using Helm for deployment, use the following steps to configure Elasti
 
    ```bash
    cd deploy/helm/
-   helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
+   helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
    --username '$oauthtoken' \
    --password "${NGC_API_KEY}" \
    --set imagePullSecret.password=$NGC_API_KEY \
    --set ngcApiSecret.password=$NGC_API_KEY \
-   -f rag-server/values.yaml
+   -f deploy/helm/nvidia-blueprint-rag/values.yaml
    ```
+
+4. After the Helm deployment, open the RAG UI at `http://<host-ip>:8090` and set Settings > Endpoint Configuration > Vector Database Endpoint to `http://elasticsearch:9200`.
 
 
 ## Verify Your Setup
@@ -101,7 +107,7 @@ You should see a response that indicates the cluster status is green or yellow, 
 
 
 
-## Define Your Own Vector Database
+# Define Your Own Vector Database
 
 You can create your own custom vector database operators by implementing the `VDBRag` base class. 
 This enables you to integrate with any vector database that isn't already supported.
@@ -117,7 +123,7 @@ For a complete example, refer to [Custom VDB Operator Notebook](../notebooks/bui
 > - Advanced users who are comfortable with deployments can start directly with Server Mode. See: [Integrate Into NVIDIA RAG (Server Mode)](#integrate-into-nvidia-rag-server-mode).
 
 
-### Integrate in Library Mode (Developer-Friendly)
+## Integrate in Library Mode (Developer-Friendly)
 
 Before wiring your custom VDB into the servers, the quickest way to iterate is to run it in library mode. This is ideal for development, debugging, and ensuring the operator behaves correctly.
 
@@ -160,7 +166,7 @@ Before wiring your custom VDB into the servers, the quickest way to iterate is t
   - Run the notebook cells to validate: create collection → upload documents → search/generate → list/delete documents.
   - Once satisfied, proceed to Server Mode integration below.
 
-### Implementation Steps
+## Implementation Steps
 
 Use the following steps to create and use your own custom database operators.
 
@@ -238,7 +244,7 @@ Use the following steps to create and use your own custom database operators.
     
     For a concrete, working example, see `src/nvidia_rag/utils/vdb/elasticsearch/elastic_vdb.py` and `notebooks/building_rag_vdb_operator.ipynb`.
 
-### Integrate Into NVIDIA RAG (Server Mode)
+## Integrate Into NVIDIA RAG (Server Mode)
 
 Before proceeding in server mode, go through “### Implementation Steps” above to implement and validate your operator.
 

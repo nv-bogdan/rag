@@ -87,3 +87,9 @@ To visualize how query decomposition works, see the diagram below:
 3. **Follow-up Generation**: Create follow-up questions for information missing from original query
 4. **Termination Check**: Stop if no follow-up needed or max depth reached
 5. **Final Synthesis**: Generate comprehensive response from all contexts and conversation
+
+---
+
+## ⚠️ Note
+
+**Query decomposition is not available for direct LLM calls** (when `use_kb=false`). This feature requires the knowledge base integration to process subqueries and retrieve relevant documents. For direct LLM interactions, queries are processed without decomposition.

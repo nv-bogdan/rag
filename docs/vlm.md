@@ -168,7 +168,7 @@ To enable VLM inference in Helm-based deployments, follow these steps:
 
 1. **Set VLM environment variables in `values.yaml`**
 
-   In your `rag-server/values.yaml` file, under the `envVars` section, set the following environment variables:
+   In your [values.yaml](../deploy/helm/nvidia-blueprint-rag/values.yaml) file, under the `envVars` section, set the following environment variables:
 
    ```yaml
    ENABLE_VLM_INFERENCE: "true"
@@ -187,12 +187,12 @@ To enable VLM inference in Helm-based deployments, follow these steps:
    Run the following command to upgrade or install your deployment:
 
    ```
-   helm upgrade --install rag -n <namespace> https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
+   helm upgrade --install rag -n <namespace> https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
      --username '$oauthtoken' \
      --password "${NGC_API_KEY}" \
      --set imagePullSecret.password=$NGC_API_KEY \
      --set ngcApiSecret.password=$NGC_API_KEY \
-     -f rag-server/values.yaml
+     -f deploy/helm/nvidia-blueprint-rag/values.yaml
    ```
 
 3. **Check if the VLM pod has come up**
@@ -226,3 +226,58 @@ VLM processing is triggered when:
 - Check rag-server logs for errors related to VLM inference or API authentication.
 - Verify that images are properly ingested and indexed in your knowledge base.
 - Monitor VLM response reasoning logs to understand when visual insights are being used or skipped.
+
+### VLM response reasoning (optional)
+
+By default, VLM response reasoning is disabled. If you observe incorrect or low-quality VLM outputs being incorporated, you can enable a reasoning gate so an LLM verifies whether to include the VLM response.
+
+- Enable at runtime (docker compose):
+
+  ```bash
+  export ENABLE_VLM_INFERENCE="true"
+  export ENABLE_VLM_RESPONSE_REASONING="true"
+  ```
+
+- Programmatic/config toggle:
+  - Set `vlm.enable_vlm_response_reasoning` to `true` (maps to `ENABLE_VLM_RESPONSE_REASONING`).
+
+When enabled, the LLM checks the VLM output and includes it only when deemed relevant and helpful. Disable it by setting `ENABLE_VLM_RESPONSE_REASONING="false"` if it filters out too aggressively during experimentation.
+
+### Configure VLM image limits
+
+Control how many images are sent to the VLM per request:
+
+- `APP_VLM_MAX_TOTAL_IMAGES` (default: 4): Maximum total images included (query + context). The pipeline will never exceed this.
+- `APP_VLM_MAX_QUERY_IMAGES` (default: 1): Maximum number of query images (e.g., screenshots supplied alongside the question).
+- `APP_VLM_MAX_CONTEXT_IMAGES` (default: 1): Maximum number of context images (extracted from citations).
+
+Notes:
+- If `APP_VLM_MAX_QUERY_IMAGES + APP_VLM_MAX_CONTEXT_IMAGES > APP_VLM_MAX_TOTAL_IMAGES`, the server logs a warning and truncates to the total limit.
+- Query images are added first (up to `APP_VLM_MAX_QUERY_IMAGES`), then remaining slots are filled with context images up to `APP_VLM_MAX_CONTEXT_IMAGES` while respecting the total cap.
+
+Example (docker compose):
+
+```bash
+export ENABLE_VLM_INFERENCE="true"
+export APP_VLM_MAX_TOTAL_IMAGES="4"
+export APP_VLM_MAX_QUERY_IMAGES="1"
+export APP_VLM_MAX_CONTEXT_IMAGES="3"
+```
+
+### VLM response as final answer
+
+By default, the VLM's response is added to the LLM as additional context, and the LLM generates the final response incorporating both textual and visual insights. You can configure the system to use the VLM's response directly as the final answer, bypassing the LLM reasoning step entirely.
+
+- `APP_VLM_RESPONSE_AS_FINAL_ANSWER` (default: false): When enabled, the VLM's response becomes the final answer without additional LLM processing.
+
+Enable at runtime (docker compose):
+
+```bash
+export ENABLE_VLM_INFERENCE="true"
+export APP_VLM_RESPONSE_AS_FINAL_ANSWER="true"
+```
+
+**Important Notes:**
+- When this flag is enabled and images are provided as input (either from context or query), the VLM response will always be used as the final answer
+- This mode is useful when you want pure visual analysis without additional text interpretation or reasoning
+- The response will be based solely on what the VLM can extract from the images, without incorporating textual context from retrieved documents

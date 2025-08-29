@@ -3,7 +3,7 @@ services:
   # Main orchestrator server which stiches together all calls to different services to fulfill the user request
   rag-server:
     container_name: rag-server
-    image: nvcr.io/nvstaging/blueprint/rag-server:${TAG:-latest}
+    image: nvcr.io/nvstaging/blueprint/rag-server:${TAG:-2.3.0.rc1}
     build:
       # Set context to repo's root directory
       context: ../../
@@ -44,7 +44,7 @@ services:
       VECTOR_DB_TOPK: ${VECTOR_DB_TOPK:-100}
 
       ##===LLM Model specific configurations===
-      APP_LLM_MODELNAME: ${APP_LLM_MODELNAME:-"nvidia/llama-3.3-nemotron-super-49b-v1"}
+      APP_LLM_MODELNAME: ${APP_LLM_MODELNAME:-"nvidia/llama-3_3-nemotron-super-49b-v1_5"}
       # url on which llm model is hosted. If "", Nvidia hosted API is used
       APP_LLM_SERVERURL: ${APP_LLM_SERVERURL-"nim-llm:8000"}
 
@@ -54,7 +54,7 @@ services:
       APP_QUERYREWRITER_SERVERURL: ${APP_QUERYREWRITER_SERVERURL-"nim-llm-llama-8b:8000"}
 
       ##===Filter Expression Generator Model specific configurations===
-      APP_FILTEREXPRESSIONGENERATOR_MODELNAME: ${APP_FILTEREXPRESSIONGENERATOR_MODELNAME:-"nvidia/llama-3.3-nemotron-super-49b-v1"}
+      APP_FILTEREXPRESSIONGENERATOR_MODELNAME: ${APP_FILTEREXPRESSIONGENERATOR_MODELNAME:-"nvidia/llama-3_3-nemotron-super-49b-v1_5"}
       # url on which filter expression generator model is hosted. If "", Nvidia hosted API is used
       APP_FILTEREXPRESSIONGENERATOR_SERVERURL: ${APP_FILTEREXPRESSIONGENERATOR_SERVERURL-"nim-llm:8000"}
       # enable filter expression generator for natural language to filter expression conversion
@@ -78,6 +78,14 @@ services:
 
       ##===VLM Model specific configurations===
       ENABLE_VLM_INFERENCE: ${ENABLE_VLM_INFERENCE:-false}
+      # Reasoning gate on VLM response: off by default; enable to mitigate incorrect VLM outputs
+      ENABLE_VLM_RESPONSE_REASONING: ${ENABLE_VLM_RESPONSE_REASONING:-false}
+      # Max images sent to VLM per request (query + context)
+      APP_VLM_MAX_TOTAL_IMAGES: ${APP_VLM_MAX_TOTAL_IMAGES:-4}
+      # Max number of query images to include in VLM input
+      APP_VLM_MAX_QUERY_IMAGES: ${APP_VLM_MAX_QUERY_IMAGES:-1}
+      # Max number of context images to include in VLM input
+      APP_VLM_MAX_CONTEXT_IMAGES: ${APP_VLM_MAX_CONTEXT_IMAGES:-1}
       APP_VLM_SERVERURL: ${APP_VLM_SERVERURL-"http://vlm-ms:8000/v1"}
       APP_VLM_MODELNAME: ${APP_VLM_MODELNAME:-"nvidia/llama-3.1-nemotron-nano-vl-8b-v1"}
 
@@ -134,7 +142,7 @@ services:
       # Minimum groundedness score threshold (0-2)
       RESPONSE_GROUNDEDNESS_THRESHOLD: ${RESPONSE_GROUNDEDNESS_THRESHOLD:-1}
       # reflection llm
-      REFLECTION_LLM: ${REFLECTION_LLM:-"nvidia/llama-3.3-nemotron-super-49b-v1"}
+      REFLECTION_LLM: ${REFLECTION_LLM:-"nvidia/llama-3_3-nemotron-super-49b-v1_5"}
       # reflection llm server url. If "", Nvidia hosted API is used
       REFLECTION_LLM_SERVERURL: ${REFLECTION_LLM_SERVERURL-"nim-llm:8000"}
       # enable iterative query decomposition
@@ -151,13 +159,13 @@ services:
   # Sample UI container which interacts with APIs exposed by rag-server container
   rag-playground:
     container_name: rag-playground
-    image: nvcr.io/nvstaging/blueprint/rag-playground:${TAG:-latest}
+    image: nvcr.io/nvstaging/blueprint/rag-playground:${TAG:-2.3.0.rc1}
     build:
       # Set context to repo's root directory
       context: ../../frontend
       dockerfile: ./Dockerfile
       args:
-        # Environment variables for Vite build  
+        # Environment variables for Vite build
         VITE_API_CHAT_URL: ${VITE_API_CHAT_URL:-http://rag-server:8081/v1}
         VITE_API_VDB_URL: ${VITE_API_VDB_URL:-http://ingestor-server:8082/v1}
         VITE_MILVUS_URL: http://milvus:19530

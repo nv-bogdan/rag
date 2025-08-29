@@ -36,7 +36,9 @@ export const FileCard = ({ file, index }: FileCardProps) => {
       
       {metadataSchema.length > 0 && (
         <div className="mt-2 space-y-2">
-          {metadataSchema.map((field) => (
+          {metadataSchema
+            .filter((field: any) => field.name !== 'filename') // Filter out filename field
+            .map((field: any) => (
             <MetadataField
               key={field.name}
               fileName={file.name}

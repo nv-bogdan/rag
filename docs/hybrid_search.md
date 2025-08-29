@@ -40,12 +40,12 @@ ingestor-server:
 Redeploy the chart with the updated configuration:
 
 ```sh
-helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.2.0.tgz \
+helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc1.tgz \
   --username '$oauthtoken' \
   --password "${NGC_API_KEY}" \
   --set imagePullSecret.password=$NGC_API_KEY \
   --set ngcApiSecret.password=$NGC_API_KEY \
-  -f rag-server/values.yaml
+  -f deploy/helm/nvidia-blueprint-rag/values.yaml
 ```
 
 **📝 Note:**

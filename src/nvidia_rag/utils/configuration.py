@@ -248,7 +248,7 @@ class LLMConfig(ConfigWizard):
     )
     model_name: str = configfield(
         "model_name",
-        default="nvidia/llama-3.3-nemotron-super-49b-v1",
+        default="nvidia/llama-3_3-nemotron-super-49b-v1_5",
         help_txt="The name of the hosted model.",
     )
     model_engine: str = configfield(
@@ -327,7 +327,7 @@ class FilterExpressionGeneratorConfig(ConfigWizard):
     model_name: str = configfield(
         "model_name",
         env_name="APP_FILTEREXPRESSIONGENERATOR_MODELNAME",
-        default="nvidia/llama-3.3-nemotron-super-49b-v1",
+        default="nvidia/llama-3_3-nemotron-super-49b-v1_5",
         help_txt="The llm name of the filter expression generator model",
     )
     server_url: str = configfield(
@@ -354,7 +354,7 @@ class FilterExpressionGeneratorConfig(ConfigWizard):
     )
     max_tokens: int = configfield(
         "max_tokens",
-        default=500,
+        default=1024,
         help_txt="The maximum number of tokens for filter expression generation.",
     )
 
@@ -506,6 +506,36 @@ class VLMConfig(ConfigWizard):
         default="nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
         help_txt="The name of the VLM model",
     )
+    enable_vlm_response_reasoning: bool = configfield(
+        "enable_vlm_response_reasoning",
+        env_name="ENABLE_VLM_RESPONSE_REASONING",
+        default=False,
+        help_txt="Enable reasoning gate on VLM responses before adding them to the prompt",
+    )
+    max_total_images: int = configfield(
+        "max_total_images",
+        env_name="APP_VLM_MAX_TOTAL_IMAGES",
+        default=4,
+        help_txt="Maximum total images sent to VLM per request (query + context).",
+    )
+    max_query_images: int = configfield(
+        "max_query_images",
+        env_name="APP_VLM_MAX_QUERY_IMAGES",
+        default=1,
+        help_txt="Maximum number of query images included in the VLM request.",
+    )
+    max_context_images: int = configfield(
+        "max_context_images",
+        env_name="APP_VLM_MAX_CONTEXT_IMAGES",
+        default=1,
+        help_txt="Maximum number of context images included in the VLM request.",
+    )
+    vlm_response_as_final_answer: bool = configfield(
+        "vlm_response_as_final_answer",
+        env_name="APP_VLM_RESPONSE_AS_FINAL_ANSWER",
+        default=False,
+        help_txt="If enabled, use the VLM's response as the final answer instead of further LLM reasoning.",
+    )
 
 
 @configclass
@@ -540,7 +570,7 @@ class SummarizerConfig(ConfigWizard):
     model_name: str = configfield(
         "model_name",
         env_name="SUMMARY_LLM",
-        default="nvidia/llama-3.3-nemotron-super-49b-v1",
+        default="nvidia/llama-3_3-nemotron-super-49b-v1_5",
         help_txt="The name of the summarizer model",
     )
     server_url: str = configfield(

@@ -7,14 +7,15 @@ This release adds RTX6000 platform support, deployment via NIM operator as well 
 
 ### Added
 - Support deploying the blueprint on RTX6000 platform.
+- Migrated to [`llama-3_3-nemotron-super-49b-v1_5`](https://build.nvidia.com/nvidia/llama-3_3-nemotron-super-49b-v1_5) as the default LLM model.
 - Added support to deploy the helm chart using [NVIDIA NIM operator](./docs/quickstart.md#enable-nim-operator-with-the-chart).
-- Updated all NIMs and NVIDIA Ingest and dependencies to latest versions.
+- Updated all NIMs, NVIDIA Ingest and third party dependencies to latest versions.
 - Refactoring to support custom 3rd party vector DB integration in a streamlined manner.
   - Interactive notebook showcasing integration with library mode [here](./notebooks/building_rag_vdb_operator.ipynb).
 - Added support for [elasticsearch vector DB as an alternate to milvus](./docs/change-vectordb.md).
 - Added opt-in [query decomposition support](./docs/query_decomposition.md).
 - Added opt-in [nemoretriever-ocr support](./docs/nemoretriever-ocr.md).
-- Added opt-in VLM embedding support
+- Added opt-in [VLM embedding support](./docs/vlm-embed.md)
 - Custom metadata enhancments. Detailed doc [here](./docs/custom-metadata.md).
   - Added support for more datatypes.
   - Added opt-in support to generate filters using LLM yielding better accuracy.
