@@ -140,6 +140,35 @@ class MilvusVDB(Milvus, VDBRag):
 
     # ----------------------------------------------------------------------------------------------
     # Implementations of the abstract methods specific to VDBRag class for ingestion
+    async def check_health(self) -> dict[str, Any]:
+        """Check Milvus database health"""
+        status = {
+            "service": "Milvus",
+            "url": self.vdb_endpoint,
+            "status": "unknown",
+            "error": None,
+        }
+
+        if not self.vdb_endpoint:
+            status["status"] = "skipped"
+            status["error"] = "No URL provided"
+            return status
+
+        try:
+            start_time = time.time()
+
+            # Test basic operation - list collections
+            collections = utility.list_collections(using=self.connection_alias)
+
+            status["status"] = "healthy"
+            status["latency_ms"] = round((time.time() - start_time) * 1000, 2)
+            status["collections"] = len(collections)
+        except Exception as e:
+            status["status"] = "error"
+            status["error"] = str(e)
+
+        return status
+
     def create_collection(
         self,
         collection_name: str,
@@ -541,9 +570,15 @@ class MilvusVDB(Milvus, VDBRag):
         """
         Get the vectorstore for a collection.
         """
+        start_time = time.time()
         logger.debug("Trying to connect to milvus collection: %s", collection_name)
         if not collection_name:
             collection_name = os.getenv("COLLECTION_NAME", "vector_db")
+
+        search_params = {}
+        if not CONFIG.vector_store.enable_gpu_search:
+            # ef is required for CPU search
+            search_params.update({"ef": CONFIG.vector_store.ef})
 
         if CONFIG.vector_store.search_type == "hybrid":
             logger.info("Creating Langchain Milvus object for Hybrid search")
@@ -560,6 +595,7 @@ class MilvusVDB(Milvus, VDBRag):
                 ],  # Dense and Sparse fields set by NV-Ingest
             )
         elif CONFIG.vector_store.search_type == "dense":
+            search_params.update({"nprobe": CONFIG.vector_store.nprobe})
             logger.debug("Index type for milvus: %s", CONFIG.vector_store.index_type)
             vectorstore = LangchainMilvus(
                 self.embedding_model,
@@ -570,7 +606,7 @@ class MilvusVDB(Milvus, VDBRag):
                     "metric_type": "L2",
                     "nlist": CONFIG.vector_store.nlist,
                 },
-                search_params={"nprobe": CONFIG.vector_store.nprobe},
+                search_params=search_params,
                 auto_id=True,
             )
         else:
@@ -581,6 +617,10 @@ class MilvusVDB(Milvus, VDBRag):
             raise ValueError(
                 f"{CONFIG.vector_store.search_type} search type is not supported. Please select from ['hybrid', 'dense']"
             )
+        end_time = time.time()
+        logger.info(
+            f" Time to get langchain milvus vectorstore: {end_time - start_time:.4f} seconds"
+        )
         return vectorstore
 
     @staticmethod
