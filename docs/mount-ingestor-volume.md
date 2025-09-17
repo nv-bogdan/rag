@@ -61,3 +61,89 @@ Each `.jsonl` file contains structured extraction metadata including text segmen
 ---
 
 **Note**: This is an advanced feature for custom processing workflows. Standard RAG functionality stores results directly in the vector database.
+
+## Helm (Kubernetes)
+
+### Overview
+
+The Helm chart supports persisting ingestor-server data to a PersistentVolumeClaim (PVC). When enabled, the chart mounts a PVC at the same path used by `INGESTOR_SERVER_DATA_DIR` (default `/data/`). Set `APP_NVINGEST_SAVETODISK=True` to write extraction results to disk.
+
+### Values
+
+Edit the values file [`values.yaml`](../deploy/helm/nvidia-blueprint-rag/values.yaml) and set:
+
+```yaml
+ingestor-server:
+  envVars:
+    # Ensure results are written to disk inside the pod
+    APP_NVINGEST_SAVETODISK: "True"
+    # Directory inside the container where results will be written
+    INGESTOR_SERVER_DATA_DIR: "/data/"
+
+  # PVC configuration (created automatically unless existingClaim is set)
+  persistence:
+    enabled: true
+    existingClaim: ""         # set to use an existing PVC; leave empty to create one
+    storageClass: ""          # set if your cluster requires a specific class (e.g., "standard")
+    accessModes:
+      - ReadWriteOnce
+    size: 50Gi
+    # Optional: explicitly set the mount path (defaults to INGESTOR_SERVER_DATA_DIR)
+    mountPath: "/data/"
+    # Optional: mount a subPath within the PVC
+    subPath: ""
+```
+
+Notes:
+
+- If `existingClaim` is empty, the chart will create a PVC named `<appName>-data`. With the default `appName` of `ingestor-server`, the PVC name will be `ingestor-server-data`.
+- The container writes results under `/data/` by default. Structure matches the compose example: `/data/nv-ingest-results/<collection>/file.results.jsonl`.
+
+### Install / Upgrade (On-prem only)
+
+Ensure your NGC API key is available:
+
+```bash
+export NGC_API_KEY="<your-ngc-api-key>"
+```
+
+Using a custom values file:
+
+```bash
+helm upgrade --install rag -n rag \
+  https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+  --username '$oauthtoken' \
+  --password "${NGC_API_KEY}" \
+  --set imagePullSecret.password=$NGC_API_KEY \
+  --set ngcApiSecret.password=$NGC_API_KEY \
+  -f -f deploy/helm/nvidia-blueprint-rag/values.yaml
+```
+
+Or with inline overrides:
+
+```bash
+helm upgrade --install rag -n rag \
+  https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+  --username '$oauthtoken' \
+  --password "${NGC_API_KEY}" \
+  --set imagePullSecret.password=$NGC_API_KEY \
+  --set ngcApiSecret.password=$NGC_API_KEY \
+  --set ingestor-server.envVars.APP_NVINGEST_SAVETODISK=True \
+  --set ingestor-server.envVars.INGESTOR_SERVER_DATA_DIR=/data/ \
+  --set ingestor-server.persistence.enabled=true \
+  --set ingestor-server.persistence.size=50Gi
+```
+
+### List and Access Files
+
+List results inside the ingestor-server pod (default mount path `/data/`):
+
+```bash
+kubectl -n rag exec -it <ingestor-pod> -- ls -l /data/
+```
+
+Copy data from the pod to your local machine:
+
+```bash
+kubectl -n rag cp <ingestor-pod>:/data/ ./ingestor-data
+```

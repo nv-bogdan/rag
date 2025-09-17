@@ -38,7 +38,7 @@ ngcApiSecret:
 # -- RAG server container image
 image:
   repository: nvcr.io/nvstaging/blueprint/rag-server
-  tag: "2.3.0.rc2"
+  tag: "2.3.0.rc2.1"
   pullPolicy: Always
 
 # -- RAG server service configuration
@@ -83,6 +83,7 @@ promptConfig:
 envVars:
   EXAMPLE_PATH: "./nvidia_rag/rag_server"
   PROMPT_CONFIG_FILE: "/prompt.yaml"
+  PROMETHEUS_MULTIPROC_DIR: "/tmp-data/prom_data"
 
   ##===MINIO specific configurations used to store multimodal base64 content===
   MINIO_ENDPOINT: "rag-minio:9000"
@@ -237,7 +238,7 @@ ingestor-server:
 
   image:
     repository: nvcr.io/nvstaging/blueprint/ingestor-server
-    tag: "2.3.0.rc2"
+    tag: "2.3.0.rc2.1"
     pullPolicy: Always
 
   # -- Service config for ingestor-server
@@ -336,6 +337,24 @@ ingestor-server:
     NV_INGEST_FILES_PER_BATCH: "16"
     NV_INGEST_CONCURRENT_BATCHES: "4"
 
+  # -- Persistent storage for ingestor-server data directory
+  # If enabled, mounts a PVC at the path used by INGESTOR_SERVER_DATA_DIR
+  persistence:
+    enabled: true
+    # If set, use an existing PVC by name; when empty and enabled, a PVC is created
+    existingClaim: ""
+    # StorageClass to use for the PVC; keep empty to use the cluster default
+    storageClass: ""
+    # Access modes for the PVC
+    accessModes:
+      - ReadWriteOnce
+    # Requested size for the PVC
+    size: 50Gi
+    # Mount path inside the container; defaults to envVars.INGESTOR_SERVER_DATA_DIR if empty
+    mountPath: "/data/"
+    # Optional subPath within the PVC
+    subPath: ""
+
 # -- Frontend
 # subsection: frontend
 # RAG Playground Frontend
@@ -348,7 +367,7 @@ frontend:
   image:
     repository: nvcr.io/nvstaging/blueprint/rag-frontend
     pullPolicy: IfNotPresent
-    tag: "2.3.0.rc2"
+    tag: "2.3.0.rc2.1"
 
   imagePullSecret:
     name: "ngc-secret"
@@ -617,7 +636,7 @@ nv-ingest:
     create: false
   image:
     repository: "nvcr.io/nvstaging/nim/nv-ingest"
-    tag: "25.9.0-RC3"
+    tag: "25.9.0-RC4"
   resources:
     limits:
       nvidia.com/gpu: 0
@@ -708,21 +727,6 @@ nv-ingest:
   otelDeployed: false
   zipkinDeployed: false
 
-  # WAR to fix -loadbalancer from the ingestion NIMs URLs
-  OCR_GRPC_ENDPOINT: nv-ingest-ocr:8001
-  OCR_HTTP_ENDPOINT: http://nv-ingest-ocr:8000/v1/infer
-  OCR_INFER_PROTOCOL: grpc
-  OCR_MODEL_NAME: paddle
-  YOLOX_GRPC_ENDPOINT: nemoretriever-page-elements-v2:8001
-  YOLOX_HTTP_ENDPOINT: http://nemoretriever-page-elements-v2:8000/v1/infer
-  YOLOX_INFER_PROTOCOL: grpc
-  YOLOX_GRAPHIC_ELEMENTS_GRPC_ENDPOINT: nemoretriever-graphic-elements-v1:8001
-  YOLOX_GRAPHIC_ELEMENTS_HTTP_ENDPOINT: http://nemoretriever-graphic-elements-v1:8000/v1/infer
-  YOLOX_GRAPHIC_ELEMENTS_INFER_PROTOCOL: grpc
-  YOLOX_TABLE_STRUCTURE_GRPC_ENDPOINT: nemoretriever-table-structure-v1:8001
-  YOLOX_TABLE_STRUCTURE_HTTP_ENDPOINT: http://nemoretriever-table-structure-v1:8000/v1/infer
-  YOLOX_TABLE_STRUCTURE_INFER_PROTOCOL: grpc
-
   # Sub-NIMs deployed by NV-Ingest
   # NIM OCR (PaddleOCR)
   paddleocr-nim:
@@ -752,6 +756,7 @@ nv-ingest:
       requests:
         nvidia.com/gpu: 1
 
+  # Nemo Retriever OCR
   nemoretriever-ocr:
     deployed: false
     replicaCount: 1

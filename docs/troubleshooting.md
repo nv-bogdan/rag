@@ -13,7 +13,6 @@ The following issues might arise when you work with the NVIDIA RAG Blueprint.
 - The Blueprint responses can have significant latency when using [NVIDIA API Catalog cloud hosted models](quickstart.md#deploy-with-docker-compose).
 - The accuracy of the pipeline is optimized for certain file types like `.pdf`, `.txt`, `.docx`. The accuracy may be poor for other file types supported by NvIngest, since image captioning is disabled by default.
 - The NeMo LLM microservice may take upto 5-6 mins to start for every deployment.
-- In case of failure while uploading files, error messages may not be shown in the user interface of rag-frontend. Developers are encouraged to check the `ingestor-server` logs for details.
 - B200 GPUs are not supported for the following advanced features:
   - Image captioning support for ingested documents
   - NeMo Guardrails for guardrails at input/output
@@ -23,17 +22,12 @@ The following issues might arise when you work with the NVIDIA RAG Blueprint.
 - Sometimes when HTTP cloud NIM endpoints are used from `deploy/compose/.env`, the `nv-ingest-ms-runtime` still logs gRPC environment variables. Following log entries can be ignored.
 - Poor retrieval accuracy is observed with Milvus GPU indexing and search in B200 and A100. Switch to cpu based search and indexing.
 - If one of the file in a bulk ingestion job is of type svg, which is a unsupported format, the full bulk ingestion job fails.
-- Complicated filter expressions with custom metadata while sending a query, are not supported from the sample user interface.
+- Complicated filter expressions with custom metadata while sending a query, are not supported from the frontend UI.
 - Due to a known issue with MIG support, currently the ingestion profile has been scaled down while deploying the chart with MIG slicing This affects the ingestion performance during bulk ingestion, specifically large bulk ingestion jobs might fail.
 - Individual file uploads are limited to a maximum size of 400 MB during ingestion. Files exceeding this limit will be rejected and must be split into smaller segments before ingesting.
-- Being a reasoning driven model, nemotron `llama-3.3-nemotron-super-49b-v1.5` model may provide verbose responses, which may not reside within ingested documents. It can also hallucinate for some complicated queries which involves reasoning. Developers are strongly advised to tune [the prompt](prompt-customization.md) for their usecases to avoid these scenarios.
-- Ensure to select a model profile explicitly before deploying the nim-llm. Currently, selection of the most optimized profile for `llama-3.3-nemotron-super-49b-v1.5` model on any given GPU does not work, follow steps outlined in [quickstart guide](quickstart.md) to select an optimized profile using `NIM_MODEL_PROFILE` before deploying.
+- `llama-3.3-nemotron-super-49b-v1.5` model provides more verbose responses in non-reasoning mode compared to v1.0. For some queries the LLM model may respond with information not available in given context. Also for out of domain queries the model may provide responses based on it's own knowledge. Developers are strongly advised to [tune the prompt](./prompt-customization.md) for their usecases to avoid these scenarios.
+- The auto selected NIM-LLM profile for llama-3.3-nemotron-super-49b-v1.5 may not work for some GPUs. Follow steps outlined in [quickstart guide](quickstart.md) to select an optimized profile using `NIM_MODEL_PROFILE` before deploying.
 - Slow VDB upload is observed in Helm deployments for Elasticsearch (ES).
-
-- **Confidence threshold filtering issues**
-  - If no documents are returned when using confidence threshold filtering, the threshold may be set too high. Try lowering the `confidence_threshold` value or ensure the reranker is enabled to provide relevance scores.
-  - Confidence threshold filtering works best when reranker is enabled. Without reranker, documents may not have meaningful relevance scores.
-  - For optimal results, use confidence threshold values between 0.3-0.7. Values above 0.7 may be too restrictive.
 
 ## Error details: [###] Unknown Error
 {'object': 'error', 'message': 'The model `nvidia/llama-3-3-nemotron-super-49b-v1-5` does not exist.', 'type': 'NotFoundError', 'param': None, 'code': 404}
@@ -42,6 +36,11 @@ This error happens when incorrect model name is passed to the hosted llm endpoin
 
 ## Out of memory issues while deploying nim-llm service
 If you run into `torch.OutOfMemoryError: CUDA out of memory.` while deploying the model, this is most likely due to wrong model profile being auto selected during deployment. Refer to steps in [quickstart guide](quickstart.md) and set the correct profile using `NIM_MODEL_PROFILE` variable.
+
+## Confidence threshold filtering issues
+  - If no documents are returned when using confidence threshold filtering, the threshold may be set too high. Try lowering the `confidence_threshold` value or ensure the reranker is enabled to provide relevance scores.
+  - Confidence threshold filtering works best when reranker is enabled. Without reranker, documents may not have meaningful relevance scores.
+  - For optimal results, use confidence threshold values between 0.3-0.7. Values above 0.7 may be too restrictive.
 
 ## Ingestion failures
 

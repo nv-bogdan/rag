@@ -3,7 +3,7 @@ services:
   # Main orchestrator server which stiches together all calls to different services to fulfill the user request
   rag-server:
     container_name: rag-server
-    image: nvcr.io/nvstaging/blueprint/rag-server:${TAG:-2.3.0.rc2}
+    image: nvcr.io/nvstaging/blueprint/rag-server:${TAG:-2.3.0.rc2.1}
     build:
       # Set context to repo's root directory
       context: ../../
@@ -131,6 +131,8 @@ services:
       APP_TRACING_OTLPHTTPENDPOINT: http://otel-collector:4318/v1/traces
       # GRPC endpoint
       APP_TRACING_OTLPGRPCENDPOINT: grpc://otel-collector:4317
+      # Prometheus multi-process metrics directory
+      PROMETHEUS_MULTIPROC_DIR: "/tmp-data/prom_data"
 
       # Choose whether to enable source metadata in document content during generation
       ENABLE_SOURCE_METADATA: ${ENABLE_SOURCE_METADATA:-true}
@@ -164,7 +166,7 @@ services:
   # Sample UI container which interacts with APIs exposed by rag-server container
   rag-frontend:
     container_name: rag-frontend
-    image: nvcr.io/nvstaging/blueprint/rag-frontend:${TAG:-2.3.0.rc2}
+    image: nvcr.io/nvstaging/blueprint/rag-frontend:${TAG:-2.3.0.rc2.1}
     build:
       # Set context to repo's root directory
       context: ../../frontend

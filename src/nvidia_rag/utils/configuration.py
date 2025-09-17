@@ -483,8 +483,24 @@ class TracingConfig(ConfigWizard):
         default=False,
         help_txt="Enable Open Telemetry Tracing",
     )
-    otlp_http_endpoint: str = configfield("otlp_http_endpoint", default="", help_txt="")
-    otlp_grpc_endpoint: str = configfield("otlp_grpc_endpoint", default="", help_txt="")
+    otlp_http_endpoint: str = configfield(
+        "otlp_http_endpoint",
+        env_name="APP_TRACING_OTLPHTTPENDPOINT",
+        default="",
+        help_txt="HTTP endpoint for OpenTelemetry trace export",
+    )
+    otlp_grpc_endpoint: str = configfield(
+        "otlp_grpc_endpoint",
+        env_name="APP_TRACING_OTLPGRPCENDPOINT",
+        default="",
+        help_txt="gRPC endpoint for OpenTelemetry trace export",
+    )
+    prometheus_multiproc_dir: str = configfield(
+        "prometheus_multiproc_dir",
+        env_name="PROMETHEUS_MULTIPROC_DIR",
+        default="/tmp/prom_data",
+        help_txt="Directory to store Prometheus multi-process metrics",
+    )
 
 
 @configclass

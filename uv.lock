@@ -1424,7 +1424,7 @@ wheels = [
 
 [[package]]
 name = "nv-ingest-api"
-version = "25.9.0rc3"
+version = "25.9.0rc4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -1433,14 +1433,14 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "tritonclient" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/13/4d/84ae9fa2c32c26e85c5e00b1178a6bd2530c84903cf8b20f653b2ee1e59c/nv_ingest_api-25.9.0rc3.tar.gz", hash = "sha256:023b57700d42712c5dc8a1d5bfaa27097d35471d998d389364d4f3a42dc19d53", size = 209697, upload-time = "2025-09-08T22:42:33.677Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8c/d4/1b41456518812f3928770ce13dd2f1c6535d140dc6789f05f5d06b8660b6/nv_ingest_api-25.9.0rc4.tar.gz", hash = "sha256:67347252a3b72d30db76630c2b0fd386ebfd238a0353c80a4d7026a2faf08eee", size = 209693, upload-time = "2025-09-15T23:34:06.027Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/22/79/ef861ebbec6dce39daa92ba5d1ea03d172af31183bf31576c9bca7ae7387/nv_ingest_api-25.9.0rc3-py3-none-any.whl", hash = "sha256:acc4f26349a20b890a19eda8f4d44046f79a2d8a38b3d8ca5a42271ae40c0fc2", size = 296329, upload-time = "2025-09-08T22:42:31.363Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/db/86ee2451e41d8aabce186d91b2e8660fe24a51e331ef705af1f0a23db986/nv_ingest_api-25.9.0rc4-py3-none-any.whl", hash = "sha256:f3e56b74151e636c09757795138006c4c3cf55ffd73207c2b1d6409d17fa3709", size = 296328, upload-time = "2025-09-15T23:34:04.539Z" },
 ]
 
 [[package]]
 name = "nv-ingest-client"
-version = "25.9.0rc3"
+version = "25.9.0rc4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "build" },
@@ -1455,9 +1455,9 @@ dependencies = [
     { name = "setuptools" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/65/7b/9471dd27fc2e247e97d4a1633c410b1e1079bbbd705b38ee351ec1a60022/nv_ingest_client-25.9.0rc3.tar.gz", hash = "sha256:6287fa59af65a0250921824d207fbda8fc801efdac31153cd3c3b0e28829a399", size = 99560, upload-time = "2025-09-08T22:42:37.97Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/69/d6/f7e10470745cb1dd71c52f9d502a68e4ead29f60478bbe6b982ac100a5f2/nv_ingest_client-25.9.0rc4.tar.gz", hash = "sha256:ae57bf7c41d4cb202e2907c28a077894da9dbc993bee626ac35725bf298a0976", size = 99559, upload-time = "2025-09-15T23:34:09.674Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8d/85/28afef027804662ae592d9fa06c6c69f1c732efab559a6c6175e56c1955d/nv_ingest_client-25.9.0rc3-py3-none-any.whl", hash = "sha256:e7fe45862f8ad44ed4a33829acf47bff4b71e70bc7cfdba9a71a780bf37a8df7", size = 114983, upload-time = "2025-09-08T22:42:35.229Z" },
+    { url = "https://files.pythonhosted.org/packages/25/3c/d8e40f6c601f4856ea43c0aae45ae55c38be2d513b4df2f8bab39716b13d/nv_ingest_client-25.9.0rc4-py3-none-any.whl", hash = "sha256:9316519f25995f28314ef23863bbdf4c36499a25528dc8e3df9c8d7ebc007782", size = 114982, upload-time = "2025-09-15T23:34:07.142Z" },
 ]
 
 [[package]]
@@ -1535,6 +1535,8 @@ rag = [
     { name = "opentelemetry-instrumentation-milvus" },
     { name = "opentelemetry-processor-baggage" },
     { name = "opentelemetry-sdk" },
+    { name = "opentelemetry-sdk-extension-prometheus-multiprocess" },
+    { name = "prometheus-client" },
     { name = "pyarrow" },
 ]
 
@@ -1559,8 +1561,8 @@ requires-dist = [
     { name = "langchain-openai", marker = "extra == 'rag'", specifier = "==0.2.8" },
     { name = "lark", specifier = ">=1.2.2" },
     { name = "minio", specifier = "==7.2.15" },
-    { name = "nv-ingest-api", specifier = "==25.9.0rc3" },
-    { name = "nv-ingest-client", specifier = "==25.9.0rc3" },
+    { name = "nv-ingest-api", specifier = "==25.9.0rc4" },
+    { name = "nv-ingest-client", specifier = "==25.9.0rc4" },
     { name = "opentelemetry-api", marker = "extra == 'all'", specifier = "==1.29.0" },
     { name = "opentelemetry-api", marker = "extra == 'ingest'", specifier = "==1.29.0" },
     { name = "opentelemetry-api", marker = "extra == 'rag'", specifier = "==1.29.0" },
@@ -1585,9 +1587,11 @@ requires-dist = [
     { name = "opentelemetry-sdk", marker = "extra == 'all'", specifier = "==1.29.0" },
     { name = "opentelemetry-sdk", marker = "extra == 'ingest'", specifier = "==1.29.0" },
     { name = "opentelemetry-sdk", marker = "extra == 'rag'", specifier = "==1.29.0" },
+    { name = "opentelemetry-sdk-extension-prometheus-multiprocess", marker = "extra == 'rag'", specifier = "==1.0.0" },
     { name = "overrides", marker = "extra == 'all'", specifier = "==7.7.0" },
     { name = "overrides", marker = "extra == 'ingest'", specifier = "==7.7.0" },
     { name = "pdfplumber", specifier = ">=0.6" },
+    { name = "prometheus-client", marker = "extra == 'rag'", specifier = "==0.20.0" },
     { name = "protobuf", specifier = ">=5.29.5" },
     { name = "pyarrow", marker = "extra == 'all'", specifier = ">=21.0.0" },
     { name = "pyarrow", marker = "extra == 'ingest'", specifier = ">=21.0.0" },
@@ -1842,6 +1846,19 @@ wheels = [
 ]
 
 [[package]]
+name = "opentelemetry-sdk-extension-prometheus-multiprocess"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-sdk" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/75/e9/d789c471de3f51d189ed48fa7e5fbc5d579f852bc44773d14a0c31a59d0b/opentelemetry_sdk_extension_prometheus_multiprocess-1.0.0.tar.gz", hash = "sha256:b66a0fa87ceeac2a1ff64a0951ac00eb02af4733b05522eb32eb23ad1523e038", size = 13356, upload-time = "2024-04-26T12:46:53.682Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/93/43/f37c99ecf18d63a7c25fc1d90df1993a4f2f7829b659e4096a9a4be17b95/opentelemetry_sdk_extension_prometheus_multiprocess-1.0.0-py2.py3-none-any.whl", hash = "sha256:a23d66121522769f7b32201e1d489264b9a0b339a4968d564e74e6be965323d0", size = 5364, upload-time = "2024-04-26T12:46:55.03Z" },
+]
+
+[[package]]
 name = "opentelemetry-semantic-conventions"
 version = "0.50b0"
 source = { registry = "https://pypi.org/simple" }
@@ -2069,11 +2086,11 @@ wheels = [
 
 [[package]]
 name = "prometheus-client"
-version = "0.22.1"
+version = "0.20.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5e/cf/40dde0a2be27cc1eb41e333d1a674a74ce8b8b0457269cc640fd42b07cf7/prometheus_client-0.22.1.tar.gz", hash = "sha256:190f1331e783cf21eb60bca559354e0a4d4378facecf78f5428c39b675d20d28", size = 69746, upload-time = "2025-06-02T14:29:01.152Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/39/3be07741a33356127c4fe633768ee450422c1231c6d34b951fee1458308d/prometheus_client-0.20.0.tar.gz", hash = "sha256:287629d00b147a32dcb2be0b9df905da599b2d82f80377083ec8463309a4bb89", size = 78278, upload-time = "2024-02-14T15:55:14.761Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/ae/ec06af4fe3ee72d16973474f122541746196aaa16cea6f66d18b963c6177/prometheus_client-0.22.1-py3-none-any.whl", hash = "sha256:cca895342e308174341b2cbf99a56bef291fbc0ef7b9e5412a0f26d653ba7094", size = 58694, upload-time = "2025-06-02T14:29:00.068Z" },
+    { url = "https://files.pythonhosted.org/packages/c7/98/745b810d822103adca2df8decd4c0bbe839ba7ad3511af3f0d09692fc0f0/prometheus_client-0.20.0-py3-none-any.whl", hash = "sha256:cde524a85bce83ca359cc837f28b8c0db5cac7aa653a588fd7e84ba061c329e7", size = 54474, upload-time = "2024-02-14T15:55:03.957Z" },
 ]
 
 [[package]]

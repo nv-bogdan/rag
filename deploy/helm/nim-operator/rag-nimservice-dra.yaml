@@ -49,6 +49,8 @@ spec:
     - name: NIM_MODEL_PROFILE
       value: ""
   replicas: 1
+  securityContext:
+    shmSize: 16Gi
   draResources:
   - claimCreationSpec:
       devices:

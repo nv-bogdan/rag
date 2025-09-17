@@ -14,6 +14,23 @@ interface CollectionsGridProps {
   searchQuery: string;
 }
 
+const Wrapper = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <Flex 
+      justify="center" 
+      align="center" 
+      style={{ 
+        width: '100%', 
+        height: '100%',
+        backgroundColor: 'var(--background-color-surface-navigation)',
+        borderRight: '1px solid var(--border-color-base)'
+      }}
+    >
+      {children}
+    </Flex>
+  );
+};
+
 export const CollectionsGrid = ({ searchQuery }: CollectionsGridProps) => {
   const { data, isLoading, error } = useCollections();
   const { selectedCollections, toggleCollection } = useCollectionsStore();
@@ -29,44 +46,44 @@ export const CollectionsGrid = ({ searchQuery }: CollectionsGridProps) => {
 
   if (isLoading) {
     return (
-      <Flex justify="center" align="center" style={{ width: '100%', height: '100%' }}>
+      <Wrapper>
         <Spinner description="Loading collections..." />
-      </Flex>
+      </Wrapper>
     );
   }
 
   if (error) {
     return (
-      <Flex justify="center" align="center" style={{ width: '100%', height: '100%' }}>
+      <Wrapper>
         <StatusMessage
           slotHeading="Failed to load collections"
           slotMedia={<CollectionsEmptyIcon />}
         />
-      </Flex>
+      </Wrapper>
     );
   }
 
   if (!data?.length) {
     return (
-      <Flex justify="center" align="center" style={{ width: '100%', height: '100%' }}>
+      <Wrapper>
         <StatusMessage
           slotHeading="No collections"
           slotSubheading="Create your first collection and add files to customize your model response."
           slotMedia={<CollectionsEmptyIcon />}
         />
-      </Flex>
+      </Wrapper>
     );
   }
 
   if (!filteredCollections.length && searchQuery) {
     return (
-      <Flex justify="center" align="center" style={{ width: '100%', height: '100%' }}>
+      <Wrapper>
         <StatusMessage
           slotHeading="No matches found"
           slotSubheading={`No collections match "${searchQuery}"`}
           slotMedia={<CollectionsEmptyIcon />}
         />
-      </Flex>
+      </Wrapper>
     );
   }
 

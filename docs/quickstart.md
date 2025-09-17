@@ -108,7 +108,7 @@ Use the following procedure to start all containers needed for this blueprint. T
    source deploy/compose/perf_profile.env
    ```
 
-4. List available profiles for your system for nim llm container. More details about profiles can be found [here](https://docs.nvidia.com/nim/large-language-models/latest/profiles.html).
+4. List available profiles for your system for nim llm container. More details about profiles can be found [here](https://docs.nvidia.com/nim/large-language-models/latest/profiles.html). List of supported hardwares for `NVIDIA llama-3.3-nemotron-super-49b-v1.5` can be found [here](https://docs.nvidia.com/nim/large-language-models/latest/supported-models.html#llama-3-3-nemotron-super-49b-v1-5).
 
    ```bash
    USERID=$(id -u) docker compose -f deploy/compose/nims.yaml run nim-llm list-model-profiles
@@ -128,35 +128,40 @@ Use the following procedure to start all containers needed for this blueprint. T
 
 5. Set the required profile. It is preferrable to select `tensorrt_llm-*` profiles for best performance. By default, automatic selection of profile is enabled but due to a known issue, vllm based profiles are selected, so it is recommended to manually select a tensorrt_llm profile before starting the `nim-llm` service.
 
-   Example of most common profiles for different supported systems are given below:
+   Example of profiles for different supported systems are given below:
 
-   1xH100 NVL based
+   1xH100 NVL
    ```bash
    export NIM_MODEL_PROFILE=tensorrt_llm-h100_nvl-fp8-tp1-pp1-throughput-2321:10de-6343e21ba5cccf783d18951c6627c207b81803c3c45f1e8b59eee062ed350143-1
    ```
 
-   1xH100 SXM based
+   1xH100 SXM
    ```bash
    export NIM_MODEL_PROFILE=tensorrt_llm-h100-fp8-tp1-pp1-throughput-2330:10de-ed15592b3e4d174a719e8188493420073c39448d9b7ed742cfe614b96fecbdd9-1
    ```
 
-   2xA100
+   2xA100 SXM
 
-    The default configuration allocates one GPU (GPU ID 1) to `nim-llm-ms` which defaults to minimum GPUs needed for H100 or B200 or RTX6000 profile. If you are deploying the solution on A100, please allocate 2 available GPUs by exporting below env variable before launching or listing profiles:
+    The default configuration allocates one GPU (GPU ID 1) to `nim-llm-ms`. If you are deploying the solution on A100 SXM, please allocate 2 available GPUs by exporting below env variable before launching or listing profiles:
      ```bash
      export LLM_MS_GPU_ID=1,2
      ```
    ```bash
    export NIM_MODEL_PROFILE=tensorrt_llm-a100-bf16-tp2-pp1-throughput-20b2:10de-4c44baded168675f277ffcbd4f9bce56cac0239944062c44d81d359f9c718f06-2
    ```
-   1xRTX6000
+
+   1xRTX PRO 6000
    ```bash
    export NIM_MODEL_PROFILE=tensorrt_llm-rtx6000_blackwell_sv-fp8-tp1-pp1-throughput-2bb5:10de-b5e4ef5f657564a90ff8b1fc8e8e6d59f24845f183209d563aa93d91fc6629ac-1
    ```
 
-   1xB200
+   2xB200
+    The default configuration allocates one GPU (GPU ID 1) to `nim-llm-ms`. If you are deploying the solution on B200, please allocate 2 available GPUs by exporting below env variable before launching or listing profiles:
+     ```bash
+     export LLM_MS_GPU_ID=1,2
+     ```
    ```bash
-   export NIM_MODEL_PROFILE=tensorrt_llm-gb200-fp8-tp1-pp1-throughput-2941:10de-a642befc43aa112e87399e2fea6d3ef2994cadb5ccb2715c9bc7e89c35e92383-1
+   export NIM_MODEL_PROFILE=tensorrt_llm-b200-fp8-tp2-pp1-throughput-2901:10de-9e409935c77054f2830cf164d7c2e7852205fcde75307cd24925ee3dc43f4c45-2
    ```
 
 6. Start all required NIMs.
@@ -508,6 +513,10 @@ helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprin
 For B200 based deployment, you need to add an environment variable to the `nvidia-nim-llama-32-nv-embedqa-1b-v2` deployment.
 Due to a known issue in the chart, we currently need to manually edit the deployment and add this env variable.
 
+[!NOTE]
+Refer to [NIM Model Profile Configuration](#nim-model-profile-configuration) to set NIM LLM profile according to the GPU type and count.
+Set the profile explicitly to avoid any errros with NIM LLM pod deployment.
+
 1. Edit the embedding deployment with the command below.
 
 ```bash
@@ -611,6 +620,10 @@ helm upgrade --install rag -n rag nvidia-blueprint-rag/ \
 --set ngcApiSecret.password=$NGC_API_KEY
 ```
 
+[!NOTE]
+Refer to [NIM Model Profile Configuration](#nim-model-profile-configuration) to set NIM LLM profile according to the GPU type and count.
+Set the profile explicitly to avoid any errros with NIM LLM pod deployment.
+
 #### Changing NIM LLM Model
 
 If you wish to switch the LLM for example to Llama-3.1-8b-instruct in this case, refer to the steps below.
@@ -671,6 +684,7 @@ Set the required profile. It is preferable to select `tensorrt_llm-*` profiles f
 
 **Example profiles for different hardware configurations:**
 
+In [`values.yaml`](../deploy/helm/nvidia-blueprint-rag/values.yaml)
 ```yaml
 # H100 NVL based
 nim-llm:
@@ -684,24 +698,26 @@ nim-llm:
     - name: NIM_MODEL_PROFILE
       value: "tensorrt_llm-h100-fp8-tp1-pp1-throughput-2330:10de-ed15592b3e4d174a719e8188493420073c39448d9b7ed742cfe614b96fecbdd9-1"
 
-# 2xA100
+# 2xA100 SXM
 nim-llm:
   env:
     - name: NIM_MODEL_PROFILE
       value: "tensorrt_llm-a100-bf16-tp2-pp1-throughput-20b2:10de-4c44baded168675f277ffcbd4f9bce56cac0239944062c44d81d359f9c718f06-2"
 
-# RTX6000
+# RTX PRO 6000
 nim-llm:
   env:
     - name: NIM_MODEL_PROFILE
       value: "tensorrt_llm-rtx6000_blackwell_sv-fp8-tp1-pp1-throughput-2bb5:10de-b5e4ef5f657564a90ff8b1fc8e8e6d59f24845f183209d563aa93d91fc6629ac-1"
 
-# B200
+# 2xB200
 nim-llm:
   env:
     - name: NIM_MODEL_PROFILE
-      value: "tensorrt_llm-gb200-fp8-tp1-pp1-throughput-2941:10de-a642befc43aa112e87399e2fea6d3ef2994cadb5ccb2715c9bc7e89c35e92383-1"
+      value: "tensorrt_llm-b200-fp8-tp2-pp1-throughput-2901:10de-9e409935c77054f2830cf164d7c2e7852205fcde75307cd24925ee3dc43f4c45-2"
 ```
+
+Then follow the steps from [`Patching the Deployment`](#patching-the-deployment) to reflect the profile in the helm deployment.
 
 #### Verifying Deployment
 
@@ -820,7 +836,7 @@ helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprin
       > [!TIP] With DRA Setup, All NIM Service can run on 3 GPUs with atleast 80GB should be enough, it could be A100 or H100 or B200
 
       - Prerequisite: [NVIDIA DRA Driver](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/25.3.2/dra-intro-install.html)
-   
+
       ```sh
       kubectl apply -f deploy/helm/nim-operator/rag-nimservice-dra.yaml -n rag
       ```

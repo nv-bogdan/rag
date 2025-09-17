@@ -2,7 +2,7 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
-## [2.3.0] - 2025-09-19
+## [2.3.0] - 2025-09-26
 This release adds RTX6000 platform support, deployment via NIM operator as well as improves vector database pluggability with the blueprint.
 
 ### Added
@@ -34,6 +34,8 @@ This release adds RTX6000 platform support, deployment via NIM operator as well 
 - Added notebooks for showcasing RAG evaluation using common metrics
   - [Notebook 1 - evaluation using RAGAS](./notebooks/evaluation_01_ragas.ipynb)
   - [Notebook 2 - Recall calculation](./notebooks/evaluation_02_recall.ipynb)
+- Added [unit tests](./tests/unit/) and [pre-commit](./LINTING.md) hooks for maintaining code quality.
+- Optimized container sizes by removing unnecessary packages and improving security.
 
 ## Changed
 - Migrated default LLM model for reflection to `llama-3.3-nemotron-super-49b` instead of `mixtral-8x22b-instruct-v01`.
@@ -50,6 +52,7 @@ This release adds RTX6000 platform support, deployment via NIM operator as well 
 ### Fixed
 - Fixed support for long audio file ingestion.
 - Fixed support to ingest images without charts/tables.
+- Fixed requirement of rebuilding rag frontend container when LLM model name was changed.
 
 ### Deprecated
 - Deprecated consistency level configuration support for Milvus.

@@ -34,7 +34,10 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
+from prometheus_client import REGISTRY, CollectorRegistry, generate_latest
+from prometheus_client.multiprocess import MultiProcessCollector
 from pydantic import BaseModel, Field, constr, model_validator
+from starlette.responses import Response
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 
 from nvidia_rag.rag_server.health import print_health_report
@@ -559,6 +562,24 @@ async def health_check(check_dependencies: bool = False):
         logger.info("Skipping dependency health checks as check_dependencies=False")
 
     return response
+
+
+@app.get("/metrics")
+def metrics_endpoint():
+    """Exposes aggregated metrics for Multi-worker setup across all workers."""
+    try:
+        # Create a new registry to collect metrics from all workers
+        registry = CollectorRegistry()
+        # Use multi-process collector to aggregate metrics from all workers
+        MultiProcessCollector(registry)
+        metrics_data = generate_latest(registry)
+        logger.debug(f"Generated {len(metrics_data)} bytes of aggregated metrics data")
+        return Response(content=metrics_data, media_type="text/plain")
+    except Exception as e:
+        logger.error(f"Error generating metrics: {e}")
+        return Response(
+            content=f"# Error generating metrics: {e}\n", media_type="text/plain"
+        )
 
 
 @app.post(
