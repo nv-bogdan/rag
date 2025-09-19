@@ -283,7 +283,7 @@ Use the following procedure to start all containers needed for this blueprint. T
    nim-llm-ms                              Up 38 minutes (healthy)
    ```
 
-11.  Open a web browser and access `http://localhost:8090` to use the RAG Playground. You can use the upload tab to ingest files into the server or follow [the notebooks](../notebooks/) to understand the API usage.
+11.  Open a web browser and access `http://localhost:8090` to use the rag frontend. You can use the upload tab to ingest files into the server or follow [the notebooks](../notebooks/) to understand the API usage.
 
 12. To stop all running services, after making some [customizations](#next-steps)
     ```bash
@@ -419,7 +419,7 @@ Use the following procedure to start all containers needed for this blueprint. T
    milvus-etcd                             Up 35 minutes (healthy)
    ```
 
-7. Open a web browser and access `http://localhost:8090` to use the RAG Playground. You can use the upload tab to ingest files into the server or follow [the notebooks](../notebooks/) to understand the API usage.
+7. Open a web browser and access `http://localhost:8090` to use the rag frontend. You can use the upload tab to ingest files into the server or follow [the notebooks](../notebooks/) to understand the API usage.
 
 8. To stop all running services, after making some [customizations](#next-steps)
     ```bash
@@ -502,7 +502,7 @@ kubectl create namespace rag
 Run the following command to install the RAG server with the Ingestor Server and Frontend enabled:
 
 ```sh
-helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz \
 --username '$oauthtoken' \
 --password "${NGC_API_KEY}" \
 --set imagePullSecret.password=$NGC_API_KEY \
@@ -552,7 +552,7 @@ For B200 and A100 GPUs, it is recommended to use CPU indexing and search for bet
 
 1. Using helm set command:
 ```sh
-helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz \
 --username '$oauthtoken' \
 --password "${NGC_API_KEY}" \
 --set imagePullSecret.password=$NGC_API_KEY \
@@ -791,7 +791,7 @@ rag-zipkin                          ClusterIP      <none>        9411/TCP       
 #### Patching the deployment
 For patching an existing deployment, modify `values.yaml` with required changes and run
 ```sh
-helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz \
 --username '$oauthtoken' \
 --password "${NGC_API_KEY}" \
 --set imagePullSecret.password=$NGC_API_KEY \
@@ -906,7 +906,7 @@ helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprin
 8. Use the following `values-nim-operator.yaml` to deploy the RAG with NIM Operator NIM Services
 
   ```sh
-  helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+  helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz \
   --username '$oauthtoken' \
   --password "${NGC_API_KEY}" \
   --set imagePullSecret.password=$NGC_API_KEY \
@@ -976,7 +976,7 @@ helm uninstall rag -n rag
 Run the following command to install the RAG Server:
 
 ```sh
-helm upgrade --install rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz -n rag \
+helm upgrade --install rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz -n rag \
   --username '$oauthtoken' \
   --password "${NGC_API_KEY}" \
   --set imagePullSecret.password=$NGC_API_KEY \
@@ -1044,7 +1044,7 @@ To use a custom Milvus endpoint, you need to update the `APP_VECTORSTORE_URL` en
    Redeploy the Helm chart to apply these changes:
 
    ```sh
-   helm upgrade rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz -f nvidia-blueprint-rag/values.yaml -n rag
+   helm upgrade rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz -f nvidia-blueprint-rag/values.yaml -n rag
    ```
 
 #### (Optional) Customizing the RAG Server UI
@@ -1105,7 +1105,7 @@ The default variables and values are the following:
    - Run the following command to install the RAG server with the Ingestor Server and New Frontend with updated `<new-image-repository>` and `<new-image-tag>`:
 
       ```sh
-      helm install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+      helm install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz \
       --username '$oauthtoken' \
       --password "${NGC_API_KEY}" \
       --set imagePullSecret.password=$NGC_API_KEY \

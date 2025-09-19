@@ -12,6 +12,9 @@ The following issues might arise when you work with the NVIDIA RAG Blueprint.
 
 - The Blueprint responses can have significant latency when using [NVIDIA API Catalog cloud hosted models](quickstart.md#deploy-with-docker-compose).
 - The accuracy of the pipeline is optimized for certain file types like `.pdf`, `.txt`, `.docx`. The accuracy may be poor for other file types supported by NvIngest, since image captioning is disabled by default.
+- **File Upload Limit**: The UI file upload interface has a hard limit of **100 files per upload batch**. When selecting more than 100 files, only the first 100 will be processed. For bulk uploads beyond this limit, use multiple upload batches or the [programmatic API](../notebooks/ingestion_api_usage.ipynb).
+
+- **Model Configuration Changes**: When updating model configurations in Kubernetes `values.yaml` (e.g., changing from 70B to 8B models), the RAG UI automatically detects and displays the new model configuration from the backend. No container rebuilds are required - simply redeploy the Helm chart with updated values and refresh the UI to see the new model settings in the Settings panel.
 - The NeMo LLM microservice may take upto 5-6 mins to start for every deployment.
 - B200 GPUs are not supported for the following advanced features:
   - Image captioning support for ingested documents

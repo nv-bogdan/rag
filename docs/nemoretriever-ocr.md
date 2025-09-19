@@ -81,7 +81,7 @@ To enable NeMo Retriever OCR using Helm, you need to enable the NeMo Retriever O
 
 ```bash
 # Apply following cmd to a fresh deployment, recommended to uninstall all deployments 1st if already present - `helm uninstall rag -n rag`
-helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz \
   --username '$oauthtoken' \
   --password "${NGC_API_KEY}" \
   --set nv-ingest.paddleocr-nim.deployed=false \

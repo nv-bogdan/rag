@@ -38,7 +38,7 @@ ngcApiSecret:
 # -- RAG server container image
 image:
   repository: nvcr.io/nvstaging/blueprint/rag-server
-  tag: "2.3.0.rc2.1"
+  tag: "2.3.0.rc2.2"
   pullPolicy: Always
 
 # -- RAG server service configuration
@@ -238,7 +238,7 @@ ingestor-server:
 
   image:
     repository: nvcr.io/nvstaging/blueprint/ingestor-server
-    tag: "2.3.0.rc2.1"
+    tag: "2.3.0.rc2.2"
     pullPolicy: Always
 
   # -- Service config for ingestor-server
@@ -357,7 +357,7 @@ ingestor-server:
 
 # -- Frontend
 # subsection: frontend
-# RAG Playground Frontend
+# rag frontend Frontend
 frontend:
   enabled: true
   appName: "rag-frontend"
@@ -367,7 +367,7 @@ frontend:
   image:
     repository: nvcr.io/nvstaging/blueprint/rag-frontend
     pullPolicy: IfNotPresent
-    tag: "2.3.0.rc2.1"
+    tag: "2.3.0.rc2.2"
 
   imagePullSecret:
     name: "ngc-secret"
@@ -541,12 +541,12 @@ nim-llm:
       nvidia.com/gpu: 1
   # H100 tp 1 profile non-NVL based
   # env:
-  #   - name: NIM_MODEL_PROFILE
-  #     value: "tensorrt_llm-h100-fp8-tp1-pp1-throughput-2330:10de-ed15592b3e4d174a719e8188493420073c39448d9b7ed742cfe614b96fecbdd9-1"                                                                              
+  # - name: NIM_MODEL_PROFILE
+  #   value: "tensorrt_llm-h100-fp8-tp1-pp1-throughput-2330:10de-ed15592b3e4d174a719e8188493420073c39448d9b7ed742cfe614b96fecbdd9-1"
   # NVL based H100 tp 1 profile
   # env:
   #   - name: NIM_MODEL_PROFILE
-  #     value: "tensorrt_llm-h100_nvl-fp8-tp1-pp1-throughput-2321:10de-6343e21ba5cccf783d18951c6627c207b81803c3c45f1e8b59eee062ed350143-1"                                                                          
+  #     value: "tensorrt_llm-h100_nvl-fp8-tp1-pp1-throughput-2321:10de-6343e21ba5cccf783d18951c6627c207b81803c3c45f1e8b59eee062ed350143-1"
   env:
     - name: NIM_MODEL_PROFILE
       value: ""
@@ -635,8 +635,8 @@ nv-ingest:
   ngcImagePullSecret:
     create: false
   image:
-    repository: "nvcr.io/nvstaging/nim/nv-ingest"
-    tag: "25.9.0-RC4"
+    repository: "nvcr.io/nvidia/nemo-microservices/nv-ingest"
+    tag: "25.9.0"
   resources:
     limits:
       nvidia.com/gpu: 0
@@ -718,6 +718,13 @@ nv-ingest:
       secretKey: minioadmin
       bucketName: nv-ingest
     fullnameOverride: milvus
+
+  # Redis Master
+  redis:
+    image:
+      repository: redis
+      tag: 8.2.1
+
 
   # Ensure nv-ingest does not deploy its own embedding NIM
   nvidia-nim-llama-32-nv-embedqa-1b-v2:

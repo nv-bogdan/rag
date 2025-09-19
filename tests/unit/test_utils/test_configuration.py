@@ -195,6 +195,7 @@ class TestMinioConfig:
 class TestSummarizerConfig:
     """Test cases for SummarizerConfig."""
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_default_values(self):
         """Test default configuration values."""
         config = SummarizerConfig.from_dict({})

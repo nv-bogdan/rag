@@ -69,7 +69,7 @@ The reflection feature supports multiple deployment options:
    ```
 
 5. Test the reflection capability:
-   - Access the RAG playground UI at http://localhost:8090
+   - Access the rag frontend UI at http://localhost:8090
 
 ## NVIDIA AI Playground (Alternative)
 
@@ -116,7 +116,7 @@ If you don't have sufficient GPU resources for on-premises deployment, you can u
    ```
 
 5. Test the reflection capability:
-   - Access the RAG playground UI at http://localhost:8090
+   - Access the rag frontend UI at http://localhost:8090
 
 [!NOTE]
 When using NVIDIA AI Playground models, you must obtain an API key. See [Obtain an API Key](quickstart.md#obtain-an-api-key) for instructions.
@@ -149,16 +149,13 @@ You can enable self-reflection through Helm when you deploy the RAG Blueprint.
    Follow the steps from [Quick Start Helm Deployment](./quickstart.md#deploy-with-helm-chart) and run:
 
    ```bash
-   helm install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+   helm install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz \
      --username '$oauthtoken' \
      --password "${NGC_API_KEY}" \
      --set imagePullSecret.password=$NGC_API_KEY \
      --set ngcApiSecret.password=$NGC_API_KEY \
      -f deploy/helm/nvidia-blueprint-rag/values.yaml
    ```
-
-> [!NOTE]
-> Enabling Helm-based reflection support increases total GPU requirement to 16x H100 (8 for RAG).
 
 ## How It Works
 

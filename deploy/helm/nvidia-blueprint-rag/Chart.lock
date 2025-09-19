@@ -1,4 +1,4 @@
- dependencies:
+dependencies:
 - name: nim-llm
   repository: https://helm.ngc.nvidia.com/nim
   version: 1.13.0
@@ -15,8 +15,8 @@
   repository: https://helm.ngc.nvidia.com/nim
   version: 1.3.0
 - name: nv-ingest
-  repository: https://helm.ngc.nvidia.com/nvstaging/nim/
-  version: 25.9.0-RC4
+  repository: https://helm.ngc.nvidia.com/nvidia/nemo-microservices
+  version: 25.9.0
 - name: elasticsearch
   repository: https://charts.bitnami.com/bitnami
   version: 22.0.13
@@ -29,5 +29,5 @@
 - name: kube-prometheus-stack
   repository: https://prometheus-community.github.io/helm-charts
   version: 76.3.0
-digest: sha256:c8c150c037bb9736aff1d4b44f5616ad498eeef7ff9d45726055ce05b9993412
-generated: "2025-09-17T09:46:53.904445667Z"
+digest: sha256:7a8ef8590ccdb5d286c3799586a28a35bdd5b4f3d39dc170edd80018fca1672f
+generated: "2025-09-18T10:32:36.334064131Z"

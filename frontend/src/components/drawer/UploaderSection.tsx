@@ -41,7 +41,35 @@ export const UploaderSection = () => {
   }, []);
 
   const handleFilesChange = useCallback((files: File[]) => {
-    useNewCollectionStore.getState().addFiles(files);
+    // Replace the entire file list instead of adding to it
+    // This ensures proper sync when files are removed from the UI
+    useNewCollectionStore.setState((state) => {
+      // Build new file metadata only for the provided files
+      const { metadataSchema } = state;
+      const newFileMetadata: Record<string, Record<string, unknown>> = {};
+      
+      for (const file of files) {
+        newFileMetadata[file.name] = {};
+        for (const field of metadataSchema) {
+          newFileMetadata[file.name][field.name] = (() => {
+            switch (field.type) {
+              case "boolean": return false;
+              case "array": return [];
+              case "integer":
+              case "float":
+              case "number": return null;
+              default: return "";
+            }
+          })();
+        }
+      }
+      
+      return {
+        ...state,
+        selectedFiles: files,
+        fileMetadata: newFileMetadata,
+      };
+    });
   }, []);
 
   return (

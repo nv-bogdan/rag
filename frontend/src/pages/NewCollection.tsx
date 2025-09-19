@@ -75,12 +75,21 @@ export default function NewCollection() {
         </Panel>
       </GridItem>
       <GridItem cols={6}>
-        <NvidiaUpload 
-          onFilesChange={handleFilesChange}
-          onValidationChange={handleValidationChange}
-          acceptedTypes={['.bmp', '.docx', '.html', '.jpeg', '.json', '.md', '.pdf', '.png', '.pptx', '.sh', '.tiff', '.txt', '.mp3', '.wav']}
-          maxFileSize={400}
-        />
+        <Panel>
+          <Stack 
+            gap="density-xl"
+            style={{ 
+              borderTop: '1px solid var(--border-color-subtle)',
+            }}
+          >
+            <NvidiaUpload 
+              onFilesChange={handleFilesChange}
+              onValidationChange={handleValidationChange}
+              acceptedTypes={['.bmp', '.docx', '.html', '.jpeg', '.json', '.md', '.pdf', '.png', '.pptx', '.sh', '.tiff', '.txt', '.mp3', '.wav']}
+              maxFileSize={400}
+            />
+          </Stack>
+        </Panel>
       </GridItem>
       <GridItem cols={12}>
         <NewCollectionButtons />

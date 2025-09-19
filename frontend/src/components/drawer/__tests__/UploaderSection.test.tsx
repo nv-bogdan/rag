@@ -23,6 +23,7 @@ vi.mock('../../../store/useNewCollectionStore', () => {
   
   const useNewCollectionStore = () => mockStore;
   useNewCollectionStore.getState = () => mockStore;
+  useNewCollectionStore.setState = vi.fn();
   
   return { useNewCollectionStore };
 });

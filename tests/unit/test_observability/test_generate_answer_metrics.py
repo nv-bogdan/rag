@@ -26,8 +26,8 @@ class DummyMetrics:
 
 def make_sync_generator(chunks):
     def gen():
-        for c in chunks:
-            yield c
+        yield from chunks
+
     return gen()
 
 

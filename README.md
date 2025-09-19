@@ -86,8 +86,8 @@ We also provide a sample user interface named `rag-frontend`.
 
 The image represents the architecture and workflow. Here's a step-by-step explanation of the workflow from end-user perspective:
 
-1. **User Interaction via RAG Playground or APIs**:
-   - The user interacts with this blueprint by typing queries into the sample UI microservice named as **RAG Playground**. These queries are sent to the system through the `POST /generate` API exposed by the RAG server microservice. There are separate [notebooks](./notebooks/) available which showcase API usage as well.
+1. **User Interaction via rag frontend or APIs**:
+   - The user interacts with this blueprint by typing queries into the sample UI microservice named as **rag frontend**. These queries are sent to the system through the `POST /generate` API exposed by the RAG server microservice. There are separate [notebooks](./notebooks/) available which showcase API usage as well.
 
 2. **Query Processing**:
    - The query enters the **RAG Server**, which is based on LangChain. An optional **Query Rewriter** component may refine or decontextualize the query for better retrieval results at this stage. An optional NeMoGuardrails component can be enabled as well to help filter out queries at input of the pipeline.
@@ -102,7 +102,7 @@ The image represents the architecture and workflow. Here's a step-by-step explan
    - The top N chunks are injected in the prompt and sent to the **Response Generation** module, which leverages **NeMo LLM inference Microservice** to generate a natural language response based on the retrieved information. Optionally, a reflection module can be enabled which makes additional LLM calls to improve the response by verifying its groundness based on retrieved context at this stage. NeMo guardrails can also be enabled at this stage to guardrail the output against toxicity.
 
 6. **Delivery of Response**:
-   - The generated response is sent back to the **RAG Playground**, where the user can view the answer to their query as well as check the output of the retriever module using the `Citations` option.
+   - The generated response is sent back to the **rag frontend**, where the user can view the answer to their query as well as check the output of the retriever module using the `Citations` option.
 
 7. **Ingestion of Data**:
    - Separately, unstructured data is ingested into the system via the `POST /documents` API using the **Ingestor server microservice**. This data is preprocessed, split into chunks and stored in the **Milvus Vector Database** using **Nvingest microservice** which is called from the ingestor microservice.

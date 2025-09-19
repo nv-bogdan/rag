@@ -151,12 +151,12 @@ nemo-guardrails-microservice            Up 4 minutes (healthy)
 
 ### Step 5: Enable Guardrails from the UI or while sending API request
 
-Once the services are running, you can enable guardrails from the RAG Playground UI:
+Once the services are running, you can enable guardrails from the rag frontend:
 
-1. Open the RAG Playground UI
+1. Open the rag frontend UI
 2. Go to Settings by clicking on the top right corner of the UI
 3. In the "Output Preferences" section, toggle "Guardrails" to ON (as shown in the screenshot below)
-4. In case you are using notebooks or APIs to interact directly with `rag-server` instead of RAG Playground UI, set `enable_guardrails` to `True` in your /generate request payload.
+4. In case you are using notebooks or APIs to interact directly with `rag-server` instead of rag frontend, set `enable_guardrails` to `True` in your /generate request payload.
 
 ![Guardrails toggle in Output Preferences](./assets/toggle_nemo_guardrails.png)
 
@@ -212,7 +212,7 @@ Locate the `nemo-guardrails` service and copy its URL.
 Use the Helm upgrade command below to enable NeMo Guardrails in RAG Blueprint by setting `ENABLE_GUARDRAILS` and the `NEMO_GUARDRAILS_URL`:
 
 ```bash
-helm upgrade rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+helm upgrade rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz \
   --username '$oauthtoken' \
   --password "${NGC_API_KEY}" \
   --set imagePullSecret.password=${NGC_API_KEY} \
@@ -225,7 +225,7 @@ Replace `<URL OF THE NEMO GUARDRAILS SERVICE>` with the URL you obtained.
 
 This will configure the RAG server to route guardrails functionality to the deployed NeMo Guardrails service.
 
-**⚠️ IMPORTANT NOTE:** In case you are using notebooks or APIs to interact directly with rag-server instead of RAG Playground UI, set `enable_guardrails` to `True` in your `/generate` request payload.
+**⚠️ IMPORTANT NOTE:** In case you are using notebooks or APIs to interact directly with rag-server instead of rag frontend UI, set `enable_guardrails` to `True` in your `/generate` request payload.
 
 ---
 

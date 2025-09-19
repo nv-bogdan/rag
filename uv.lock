@@ -1424,7 +1424,7 @@ wheels = [
 
 [[package]]
 name = "nv-ingest-api"
-version = "25.9.0rc4"
+version = "25.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -1433,14 +1433,14 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "tritonclient" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8c/d4/1b41456518812f3928770ce13dd2f1c6535d140dc6789f05f5d06b8660b6/nv_ingest_api-25.9.0rc4.tar.gz", hash = "sha256:67347252a3b72d30db76630c2b0fd386ebfd238a0353c80a4d7026a2faf08eee", size = 209693, upload-time = "2025-09-15T23:34:06.027Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8b/84/70a7d089f4b7961eff4dfa8e4d0a485a7fba5c4403bb061f81789f25578a/nv_ingest_api-25.9.0.tar.gz", hash = "sha256:45f611e51560b8175ce06097f9b954500ae19aba4322a59796f1fb533e6d5fc2", size = 209566, upload-time = "2025-09-16T21:06:10.994Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/db/86ee2451e41d8aabce186d91b2e8660fe24a51e331ef705af1f0a23db986/nv_ingest_api-25.9.0rc4-py3-none-any.whl", hash = "sha256:f3e56b74151e636c09757795138006c4c3cf55ffd73207c2b1d6409d17fa3709", size = 296328, upload-time = "2025-09-15T23:34:04.539Z" },
+    { url = "https://files.pythonhosted.org/packages/32/38/9ec1cb9d594f64b6eb88ad1da31c891c70444b742e7f5645b5ef4646e509/nv_ingest_api-25.9.0-py3-none-any.whl", hash = "sha256:f39fcafbcd2842be9fce9485e65afd301992bdb2d42f31d8c6736dd8ba6ba4fe", size = 296295, upload-time = "2025-09-16T21:06:08.344Z" },
 ]
 
 [[package]]
 name = "nv-ingest-client"
-version = "25.9.0rc4"
+version = "25.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "build" },
@@ -1449,15 +1449,16 @@ dependencies = [
     { name = "fsspec" },
     { name = "httpx" },
     { name = "llama-index-embeddings-nvidia" },
+    { name = "nv-ingest-api" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "requests" },
     { name = "setuptools" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/69/d6/f7e10470745cb1dd71c52f9d502a68e4ead29f60478bbe6b982ac100a5f2/nv_ingest_client-25.9.0rc4.tar.gz", hash = "sha256:ae57bf7c41d4cb202e2907c28a077894da9dbc993bee626ac35725bf298a0976", size = 99559, upload-time = "2025-09-15T23:34:09.674Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4b/6c/04037168ac68ec9f6168e5c50572e84238225ab58e4c31cf80530cc7ad82/nv_ingest_client-25.9.0.tar.gz", hash = "sha256:1e43f925b28843f9e47108e37b22c0a3c2a77af15be4ed4b5977a83af1f55a09", size = 99358, upload-time = "2025-09-16T21:06:15.419Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/3c/d8e40f6c601f4856ea43c0aae45ae55c38be2d513b4df2f8bab39716b13d/nv_ingest_client-25.9.0rc4-py3-none-any.whl", hash = "sha256:9316519f25995f28314ef23863bbdf4c36499a25528dc8e3df9c8d7ebc007782", size = 114982, upload-time = "2025-09-15T23:34:07.142Z" },
+    { url = "https://files.pythonhosted.org/packages/89/96/548b87f4e14bc014fccdc87edc2fa8ae70af299a36084bdd23a9f1884452/nv_ingest_client-25.9.0-py3-none-any.whl", hash = "sha256:ab07fdff253d678986db1bc2b083b7c94243be5d327155dbbc19883f49675e41", size = 114937, upload-time = "2025-09-16T21:06:12.764Z" },
 ]
 
 [[package]]
@@ -1561,8 +1562,8 @@ requires-dist = [
     { name = "langchain-openai", marker = "extra == 'rag'", specifier = "==0.2.8" },
     { name = "lark", specifier = ">=1.2.2" },
     { name = "minio", specifier = "==7.2.15" },
-    { name = "nv-ingest-api", specifier = "==25.9.0rc4" },
-    { name = "nv-ingest-client", specifier = "==25.9.0rc4" },
+    { name = "nv-ingest-api", specifier = "==25.9.0" },
+    { name = "nv-ingest-client", specifier = "==25.9.0" },
     { name = "opentelemetry-api", marker = "extra == 'all'", specifier = "==1.29.0" },
     { name = "opentelemetry-api", marker = "extra == 'ingest'", specifier = "==1.29.0" },
     { name = "opentelemetry-api", marker = "extra == 'rag'", specifier = "==1.29.0" },

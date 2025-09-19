@@ -62,6 +62,7 @@ def instrument(app: FastAPI, settings):
 
         # Use PrometheusMeterProvider for multi-process support
         # This ensures /metrics endpoint works with multi-worker aggregation
+        os.environ["PROMETHEUS_MULTIPROC_DIR"] = prom_dir
         metrics.set_meter_provider(PrometheusMeterProvider())
 
         # Set up OTLP export separately if endpoint is configured

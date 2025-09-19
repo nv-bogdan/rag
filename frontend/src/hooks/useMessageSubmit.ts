@@ -18,6 +18,7 @@ import { useChatStore } from "../store/useChatStore";
 import { useSendMessage } from "../api/useSendMessage";
 import { useSettingsStore, useHealthDependentFeatures } from "../store/useSettingsStore";
 import { useCollectionsStore } from "../store/useCollectionsStore";
+import { useStreamingStore } from "../store/useStreamingStore";
 import { useCollections } from "../api/useCollectionsApi";
 import { useUUID } from "./useUUID";
 import type { GenerateRequest } from "../types/requests";
@@ -72,7 +73,8 @@ function cleanRequestObject(obj: Partial<GenerateRequest>): GenerateRequest {
  */
 export const useMessageSubmit = () => {
   const { input, setInput, filters, addMessage, messages } = useChatStore();
-  const { mutateAsync: sendMessage, resetStream, isStreaming } = useSendMessage();
+  const { mutateAsync: sendMessage, resetStream } = useSendMessage();
+  const { isStreaming } = useStreamingStore(); // Use centralized streaming state
   const { selectedCollections } = useCollectionsStore();
   const { data: allCollections = [] } = useCollections();
   const settings = useSettingsStore();
@@ -184,7 +186,7 @@ export const useMessageSubmit = () => {
   }, [selectedCollections, allCollections, settings, filters]);
 
   const handleSubmit = useCallback(async () => {
-    if (!input.trim() || shouldDisableHealthFeatures) return;
+    if (!input.trim() || shouldDisableHealthFeatures || isStreaming) return;
 
     const userMessage = {
       id: generateUUID(),
@@ -208,7 +210,7 @@ export const useMessageSubmit = () => {
 
     const request = createRequest(currentMessages);
     await sendMessage({ request, assistantId: assistantMessage.id });
-  }, [input, messages, addMessage, setInput, resetStream, createRequest, sendMessage, generateUUID, shouldDisableHealthFeatures]);
+  }, [input, messages, addMessage, setInput, resetStream, createRequest, sendMessage, generateUUID, shouldDisableHealthFeatures, isStreaming]);
 
   return {
     handleSubmit,

@@ -82,7 +82,7 @@ Additionally, ensure that **table extraction**, **chart extraction**, and **imag
 Example Helm install command:
 
 ```bash
-helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.tgz \
+helm upgrade --install rag -n rag https://helm.ngc.nvidia.com/nvstaging/blueprint/charts/nvidia-blueprint-rag-v2.3.0-rc2.2.tgz \
   --username '$oauthtoken' \
   --password "${NGC_API_KEY}" \
   --set nim-llm.enabled=true \
